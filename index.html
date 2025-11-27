@@ -31,15 +31,20 @@
 
         <button id="addMaterial">Cadastrar Material</button>
 
-        <h3>Materiais cadastrados</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
-                </tr>
-            </thead>
-            <tbody id="listaMateriais"></tbody>
-        </table>
+        <!-- Botão para mostrar/esconder tabela -->
+        <button id="btnMostrarMateriais">Mostrar Materiais Cadastrados</button>
+
+        <div id="tabelaMateriaisLista" style="display:none;">
+            <h3>Materiais cadastrados</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listaMateriais"></tbody>
+            </table>
+        </div>
     </section>
 
     <!-- ==================== PRODUTOS ==================== -->
@@ -68,33 +73,45 @@
 
         <button id="addProduto">Cadastrar Produto</button>
 
-        <h3>Lista de Produtos</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th><th>Nome</th><th>Tamanho</th><th>Custo total</th><th>Ação</th>
-                </tr>
-            </thead>
-            <tbody id="listaProdutos"></tbody>
-        </table>
+        <!-- Botão para mostrar/esconder tabela de produtos -->
+        <button id="btnMostrarProdutos">Mostrar Lista de Produtos</button>
+
+        <div id="tabelaProdutosLista" style="display:none;">
+            <h3>Lista de Produtos</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Nome</th><th>Tamanho</th><th>Custo total</th><th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="listaProdutos"></tbody>
+            </table>
+        </div>
     </section>
-        <!-- ==================== PRODUÇÕES ==================== -->
+
+    <!-- ==================== PRODUÇÕES ==================== -->
     <section class="box">
         <h2>Produções Registradas</h2>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Produto</th>
-                    <th>Custo Total</th>
-                    <th>Quantidade</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody id="listaProducoes"></tbody>
-        </table>
+        <!-- Botão para mostrar/esconder tabela de produções -->
+        <button id="btnMostrarProducoes">Mostrar Produções</button>
+
+        <div id="tabelaProducoesLista" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Produto</th>
+                        <th>Custo Total</th>
+                        <th>Quantidade</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody id="listaProducoes"></tbody>
+            </table>
+        </div>
     </section>
+
     <!-- ==================== RELATÓRIO DE PRODUÇÕES ==================== -->
     <section class="box">
         <h2>Gerar Relatório de Produções</h2>
@@ -135,3 +152,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
