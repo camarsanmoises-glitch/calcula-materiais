@@ -10,25 +10,31 @@ let produtos = [];
 // CARREGAMENTO INICIAL
 // ================================
 $(document).ready(function () {
-    // Não carregamos as tabelas automaticamente; só carregam ao clicar nos botões
+    // Tabelas só carregam quando o usuário clicar nos botões
 });
 
 // ================================
 // BOTÕES PARA MOSTRAR/OCULTAR
 // ================================
-$("#btnMostrarMateriais").one("click", function () {
-    carregarMateriais();
-    $("#tabelaMateriaisLista").show();
+$("#btnMostrarMateriais").click(function () {
+    $("#tabelaMateriaisLista").toggle();
+    if ($("#tabelaMateriaisLista").is(":visible")) {
+        carregarMateriais();
+    }
 });
 
-$("#btnMostrarProdutos").one("click", function () {
-    carregarProdutos();
-    $("#tabelaProdutosLista").show();
+$("#btnMostrarProdutos").click(function () {
+    $("#tabelaProdutosLista").toggle();
+    if ($("#tabelaProdutosLista").is(":visible")) {
+        carregarProdutos();
+    }
 });
 
-$("#btnMostrarProducoes").one("click", function () {
-    carregarProducoes();
-    $("#tabelaProducoesLista").show();
+$("#btnMostrarProducoes").click(function () {
+    $("#tabelaProducoesLista").toggle();
+    if ($("#tabelaProducoesLista").is(":visible")) {
+        carregarProducoes();
+    }
 });
 
 // ================================
@@ -85,7 +91,9 @@ $(document).on("click", ".btnEditarMaterial", function () {
             estoque
         }),
         success: function () {
-            carregarMateriais();
+            if ($("#tabelaMateriaisLista").is(":visible")) {
+                carregarMateriais();
+            }
             alert("Material atualizado!");
         }
     });
@@ -102,7 +110,9 @@ $(document).on("click", ".btnExcluirMaterial", function () {
         url: `${API}/materiais/${id}`,
         method: "DELETE",
         success: function () {
-            carregarMateriais();
+            if ($("#tabelaMateriaisLista").is(":visible")) {
+                carregarMateriais();
+            }
             alert("Material removido!");
         }
     });
@@ -125,7 +135,9 @@ $("#addMaterial").click(function () {
         contentType: "application/json",
         data: JSON.stringify(material),
         success: function () {
-            carregarMateriais();
+            if ($("#tabelaMateriaisLista").is(":visible")) {
+                carregarMateriais();
+            }
             alert("Material cadastrado!");
         }
     });
@@ -218,7 +230,9 @@ $("#addProduto").click(function () {
         contentType: "application/json",
         data: JSON.stringify(produto),
         success: function () {
-            carregarProdutos();
+            if ($("#tabelaProdutosLista").is(":visible")) {
+                carregarProdutos();
+            }
             alert("Produto cadastrado!");
         }
     });
@@ -265,7 +279,9 @@ $(document).on("click", ".btnEditarProduto", function () {
             materiais: prod.materiais
         }),
         success: function () {
-            carregarProdutos();
+            if ($("#tabelaProdutosLista").is(":visible")) {
+                carregarProdutos();
+            }
             alert("Produto atualizado!");
         }
     });
@@ -282,7 +298,9 @@ $(document).on("click", ".btnExcluirProduto", function () {
         url: `${API}/produtos/${id}`,
         method: "DELETE",
         success: function () {
-            carregarProdutos();
+            if ($("#tabelaProdutosLista").is(":visible")) {
+                carregarProdutos();
+            }
             alert("Produto removido!");
         }
     });
@@ -307,8 +325,8 @@ $(document).on("click", ".btnProduzir", function () {
         data: JSON.stringify({ quantidade: qtd }),
         success: function () {
             alert(`Produção registrada! (${qtd} unidades). Estoque atualizado.`);
-            carregarMateriais();
-            carregarProducoes();
+            if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
+            if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
         },
         error: function (xhr) {
             alert("Erro: " + xhr.responseJSON.error);
@@ -412,3 +430,4 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
