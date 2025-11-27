@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tecido App</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- jQuery -->
+    <script src="jquery-3.7.1.js"></script>
+</head>
+<body>
+
+    <h1>Gerenciamento de Materiais e Produtos</h1>
+
+    <!-- ==================== MATERIAIS ==================== -->
+    <section class="box">
+        <h2>Cadastrar Material</h2>
+
+        <label>Nome:</label>
+        <input type="text" id="matNome">
+
+        <label>Cor:</label>
+        <input type="text" id="matCor">
+
+        <label>Valor por grama (R$):</label>
+        <input type="number" id="matValor" step="0.01">
+
+        <label>Quantidade em estoque (g):</label>
+        <input type="number" id="matQtd" step="0.01">
+
+        <button id="addMaterial">Cadastrar Material</button>
+
+        <h3>Materiais cadastrados</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="listaMateriais"></tbody>
+        </table>
+    </section>
+
+    <!-- ==================== PRODUTOS ==================== -->
+    <section class="box">
+        <h2>Cadastrar Produto</h2>
+
+        <label>Nome:</label>
+        <input type="text" id="prodNome">
+
+        <label>Tamanho:</label>
+        <input type="text" id="prodTam">
+
+        <h3>Materiais do Produto</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Material</th><th>Qtd (g)</th><th>Custo</th><th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaMateriaisProd"></tbody>
+        </table>
+
+        <button id="addLinhaMat">Adicionar Material</button>
+
+        <h3>Custo Total: R$ <span id="totalCusto">0.00</span></h3>
+
+        <button id="addProduto">Cadastrar Produto</button>
+
+        <h3>Lista de Produtos</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>Nome</th><th>Tamanho</th><th>Custo total</th><th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="listaProdutos"></tbody>
+        </table>
+    </section>
+        <!-- ==================== PRODUÇÕES ==================== -->
+    <section class="box">
+        <h2>Produções Registradas</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Custo Total</th>
+                    <th>Quantidade</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody id="listaProducoes"></tbody>
+        </table>
+    </section>
+    <!-- ==================== RELATÓRIO DE PRODUÇÕES ==================== -->
+    <section class="box">
+        <h2>Gerar Relatório de Produções</h2>
+
+        <label>Filtro:</label>
+        <select id="filtroRelatorio">
+            <option value="diario">Diário</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensal">Mensal</option>
+            <option value="anual">Anual</option>
+            <option value="periodo">Período específico</option>
+        </select>
+
+        <div id="filtroPeriodo" style="display:none; margin-top:10px;">
+            <label>Data inicial:</label>
+            <input type="date" id="dataInicial">
+            <label>Data final:</label>
+            <input type="date" id="dataFinal">
+        </div>
+
+        <button id="btnGerarRelatorio">Gerar Relatório</button>
+
+        <h3>Resultado do Relatório</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Custo Total</th>
+                    <th>Quantidade</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody id="relatorioProducoes"></tbody>
+        </table>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
