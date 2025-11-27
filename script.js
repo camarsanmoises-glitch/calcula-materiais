@@ -6,16 +6,30 @@ const API = "https://camarsan.pythonanywhere.com";
 let materiais = [];
 let produtos = [];
 
-
 // ================================
 // CARREGAMENTO INICIAL
 // ================================
 $(document).ready(function () {
-    carregarMateriais();
-    carregarProdutos();
-    carregarProducoes();
+    // Não carregamos as tabelas automaticamente; só carregam ao clicar nos botões
 });
 
+// ================================
+// BOTÕES PARA MOSTRAR/OCULTAR
+// ================================
+$("#btnMostrarMateriais").one("click", function () {
+    carregarMateriais();
+    $("#tabelaMateriaisLista").show();
+});
+
+$("#btnMostrarProdutos").one("click", function () {
+    carregarProdutos();
+    $("#tabelaProdutosLista").show();
+});
+
+$("#btnMostrarProducoes").one("click", function () {
+    carregarProducoes();
+    $("#tabelaProducoesLista").show();
+});
 
 // ================================
 // MATERIAIS
@@ -37,8 +51,8 @@ function atualizarTabelaMateriais() {
                 <td>${m.id}</td>
                 <td>${m.nome}</td>
                 <td>${m.cor}</td>
-                <td>R$ ${m.valor_grama}</td>
-                <td>${m.estoque}</td>
+                <td>R$ ${parseFloat(m.valor_grama).toFixed(2)}</td>
+                <td>${parseFloat(m.estoque).toFixed(2)}</td>
                 <td>
                     <button class="btnEditarMaterial" data-id="${m.id}">Editar</button>
                     <button class="btnExcluirMaterial" data-id="${m.id}">Excluir</button>
@@ -47,6 +61,7 @@ function atualizarTabelaMateriais() {
         `);
     });
 }
+
 // ================================
 // EDITAR MATERIAL
 // ================================
@@ -56,8 +71,8 @@ $(document).on("click", ".btnEditarMaterial", function () {
 
     let nome = prompt("Nome:", mat.nome);
     let cor = prompt("Cor:", mat.cor);
-    let valor = prompt("Valor por grama:", mat.valor_grama);
-    let estoque = prompt("Estoque:", mat.estoque);
+    let valor = parseFloat(prompt("Valor por grama:", mat.valor_grama));
+    let estoque = parseFloat(prompt("Estoque:", mat.estoque));
 
     $.ajax({
         url: `${API}/materiais/${id}`,
@@ -81,7 +96,6 @@ $(document).on("click", ".btnEditarMaterial", function () {
 // ================================
 $(document).on("click", ".btnExcluirMaterial", function () {
     let id = $(this).data("id");
-
     if (!confirm("Tem certeza que deseja excluir este material?")) return;
 
     $.ajax({
@@ -94,12 +108,15 @@ $(document).on("click", ".btnExcluirMaterial", function () {
     });
 });
 
+// ================================
+// ADICIONAR MATERIAL
+// ================================
 $("#addMaterial").click(function () {
     let material = {
         nome: $("#matNome").val(),
         cor: $("#matCor").val(),
-        valor_grama: $("#matValor").val(),
-        estoque: $("#matQtd").val()
+        valor_grama: parseFloat($("#matValor").val()),
+        estoque: parseFloat($("#matQtd").val())
     };
 
     $.ajax({
@@ -113,7 +130,6 @@ $("#addMaterial").click(function () {
         }
     });
 });
-
 
 // ================================
 // PRODUTOS
@@ -140,7 +156,7 @@ $("#addLinhaMat").click(function () {
 
     $("#tabelaMateriaisProd").append(linha);
 
-    // colocar materiais no select
+    // preencher select com materiais
     let ultima = $("#tabelaMateriaisProd tr").last().find(".matSelect");
     materiais.forEach(m => {
         ultima.append(`<option value="${m.id}">${m.nome} (${m.cor})</option>`);
@@ -153,7 +169,7 @@ $(document).on("click", ".removeBtn", function () {
     calcularTotal();
 });
 
-// recalcular custo ao alterar
+// recalcular custo
 $(document).on("change", ".matSelect, .matQtd", function () {
     calcularTotal();
 });
@@ -162,13 +178,12 @@ function calcularTotal() {
     let total = 0;
 
     $("#tabelaMateriaisProd tr").each(function () {
-        let matId = $(this).find(".matSelect").val();
+        let matId = parseInt($(this).find(".matSelect").val(), 10);
         let qtd = parseFloat($(this).find(".matQtd").val());
 
         if (!matId || !qtd) return;
 
         let mat = materiais.find(m => m.id == matId);
-
         let custo = mat.valor_grama * qtd;
         total += custo;
 
@@ -178,6 +193,9 @@ function calcularTotal() {
     $("#totalCusto").text(total.toFixed(2));
 }
 
+// ================================
+// ADICIONAR PRODUTO
+// ================================
 $("#addProduto").click(function () {
     let produto = {
         nome: $("#prodNome").val(),
@@ -186,8 +204,8 @@ $("#addProduto").click(function () {
     };
 
     $("#tabelaMateriaisProd tr").each(function () {
-        let matId = $(this).find(".matSelect").val();
-        let qtd = $(this).find(".matQtd").val();
+        let matId = parseInt($(this).find(".matSelect").val(), 10);
+        let qtd = parseFloat($(this).find(".matQtd").val());
 
         if (matId && qtd) {
             produto.materiais.push({ id: matId, quantidade: qtd });
@@ -216,7 +234,7 @@ function atualizarTabelaProdutos() {
                 <td>${p.id}</td>
                 <td>${p.nome}</td>
                 <td>${p.tamanho}</td>
-                <td>R$ ${p.custo_total.toFixed(2)}</td>
+                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                 <td>
                     <button class="btnProduzir" data-id="${p.id}">Produzir</button>
                     <button class="btnEditarProduto" data-id="${p.id}">Editar</button>
@@ -226,6 +244,7 @@ function atualizarTabelaProdutos() {
         `);
     });
 }
+
 // ================================
 // EDITAR PRODUTO
 // ================================
@@ -257,7 +276,6 @@ $(document).on("click", ".btnEditarProduto", function () {
 // ================================
 $(document).on("click", ".btnExcluirProduto", function () {
     let id = $(this).data("id");
-
     if (!confirm("Excluir produto?")) return;
 
     $.ajax({
@@ -270,10 +288,11 @@ $(document).on("click", ".btnExcluirProduto", function () {
     });
 });
 
-
+// ================================
+// PRODUZIR PRODUTO
+// ================================
 $(document).on("click", ".btnProduzir", function () {
     let id = $(this).data("id");
-
     let qtd = parseInt(prompt("Quantas unidades deseja produzir?"), 10);
 
     if (!qtd || qtd <= 0) {
@@ -286,7 +305,7 @@ $(document).on("click", ".btnProduzir", function () {
         method: "POST",
         contentType: "application/json",
         data: JSON.stringify({ quantidade: qtd }),
-        success: function (res) {
+        success: function () {
             alert(`Produção registrada! (${qtd} unidades). Estoque atualizado.`);
             carregarMateriais();
             carregarProducoes();
@@ -296,7 +315,6 @@ $(document).on("click", ".btnProduzir", function () {
         }
     });
 });
-
 
 // ================================
 // PRODUÇÕES
@@ -316,14 +334,17 @@ function atualizarTabelaProducoes(lista) {
             <tr>
                 <td>${p.id}</td>
                 <td>${p.nome_produto}</td>
-                <td>R$ ${p.custo_total.toFixed(2)}</td>
+                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                 <td>${p.quantidade}</td>
-                <td>${new Date(p.data).toLocaleString()}</td>
+                <td>${new Date(p.data + "Z").toLocaleString()}</td>
             </tr>
         `);
     });
 }
-// Mostrar ou esconder os campos de período
+
+// ================================
+// RELATÓRIO DE PRODUÇÕES
+// ================================
 $("#filtroRelatorio").change(function () {
     if ($(this).val() === "periodo") {
         $("#filtroPeriodo").show();
@@ -332,7 +353,6 @@ $("#filtroRelatorio").change(function () {
     }
 });
 
-// Gerar relatório
 $("#btnGerarRelatorio").click(function () {
     const filtro = $("#filtroRelatorio").val();
     let dataInicial = $("#dataInicial").val();
@@ -372,13 +392,11 @@ $("#btnGerarRelatorio").click(function () {
                 break;
         }
 
-        // filtrar produções
         const filtradas = lista.filter(p => {
-            const dataProd = new Date(p.data);
+            const dataProd = new Date(p.data + "Z");
             return dataProd >= inicio && dataProd <= fim;
         });
 
-        // atualizar tabela
         let tabela = $("#relatorioProducoes");
         tabela.html("");
         filtradas.forEach(p => {
@@ -386,12 +404,11 @@ $("#btnGerarRelatorio").click(function () {
                 <tr>
                     <td>${p.id}</td>
                     <td>${p.nome_produto}</td>
-                    <td>R$ ${p.custo_total.toFixed(2)}</td>
+                    <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                     <td>${p.quantidade}</td>
-                    <td>${new Date(p.data).toLocaleString()}</td>
+                    <td>${new Date(p.data + "Z").toLocaleString()}</td>
                 </tr>
             `);
         });
     });
 });
-
