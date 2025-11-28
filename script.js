@@ -25,10 +25,17 @@ $("#btnMostrarMateriais").click(function () {
 
 $("#btnMostrarProdutos").click(function () {
     $("#tabelaProdutosLista").toggle();
+
     if ($("#tabelaProdutosLista").is(":visible")) {
+
+        // ⚠️ carregue os materiais antes de permitir qualquer ação em produtos
+        carregarMateriais();
+
+        // só depois carregue os produtos
         carregarProdutos();
     }
 });
+
 
 $("#btnMostrarProducoes").click(function () {
     $("#tabelaProducoesLista").toggle();
@@ -513,5 +520,6 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
 
