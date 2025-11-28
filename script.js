@@ -149,6 +149,7 @@ $("#addMaterial").click(function () {
 function carregarProdutos() {
     $.get(`${API}/produtos`, function (data) {
         produtos = data;
+        produtos = produtos.map(p => ({ ...p }));
         atualizarTabelaProdutos();
     });
 }
@@ -292,16 +293,23 @@ $(document).on("click", ".btnEditarProduto", function () {
 // ================================
 $(document).on("click", ".btnExcluirProduto", function () {
     let id = $(this).data("id");
+
     if (!confirm("Excluir produto?")) return;
 
     $.ajax({
         url: `${API}/produtos/${id}`,
         method: "DELETE",
         success: function () {
-            if ($("#tabelaProdutosLista").is(":visible")) {
-                carregarProdutos();
-            }
             alert("Produto removido!");
+
+            // limpa visualmente para evitar ID fantasma
+            $("#listaProdutos").html("");
+
+            // recarrega lista real do servidor
+            carregarProdutos();
+        },
+        error: function (xhr) {
+            alert("Erro ao remover: " + xhr.responseText);
         }
     });
 });
@@ -430,4 +438,5 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
