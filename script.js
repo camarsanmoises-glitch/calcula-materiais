@@ -335,23 +335,25 @@ $(document).on("click", ".btnProduzir", function () {
     }
 
     $.ajax({
-    url: `${API}/em_producao`,
-    method: "POST",
-    contentType: "application/json",
-    data: JSON.stringify({
-        produto_id: id,
-        quantidade: qtd
-    }),
-    success: function () {
-        alert("Item enviado para a fila de produção!");
+        url: `${API}/em_producao`,
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            produto_id: id,
+            quantidade: qtd
+        }),
+        success: function () {
+            alert("Item enviado para a fila de produção!");
 
-        if ($("#tabelaEmProducaoLista").is(":visible")) carregarEmProducao();
-        if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais(); // estoque cai agora
-    },
-    error: function (xhr) {
-        alert("Erro: " + xhr.responseText);
-    }
-});
+            if ($("#tabelaEmProducaoLista").is(":visible")) carregarEmProducao();
+            if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
+        },
+        error: function (xhr) {
+            alert("Erro: " + xhr.responseText);
+        }
+    });
+}); // ✔ FINALMENTE FECHADO!
+
 // =======================================================================
 // AÇÕES DE PRODUÇÃO
 // =======================================================================
@@ -385,7 +387,6 @@ $(document).on("click", ".btnExcluirProducao", function () {
     });
 });
 
-});
 // ================================
 // EM PRODUÇÃO
 // ================================
@@ -512,7 +513,5 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
-
-
 
 
