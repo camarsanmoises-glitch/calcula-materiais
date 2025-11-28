@@ -37,6 +37,14 @@ $("#btnMostrarProducoes").click(function () {
     }
 });
 
+$("#btnMostrarEmProducao").click(function () {
+    $("#tabelaEmProducaoLista").toggle();
+    if ($("#tabelaEmProducaoLista").is(":visible")) {
+        carregarEmProducao();
+    }
+});
+
+
 // ================================
 // MATERIAIS
 // ================================
@@ -327,20 +335,86 @@ $(document).on("click", ".btnProduzir", function () {
     }
 
     $.ajax({
-        url: `${API}/produzir/${id}`,
-        method: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ quantidade: qtd }),
+    url: `${API}/em_producao`,
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({
+        produto_id: id,
+        quantidade: qtd
+    }),
+    success: function () {
+        alert("Item enviado para a fila de produção!");
+
+        if ($("#tabelaEmProducaoLista").is(":visible")) carregarEmProducao();
+        if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais(); // estoque cai agora
+    },
+    error: function (xhr) {
+        alert("Erro: " + xhr.responseText);
+    }
+});
+// =======================================================================
+// AÇÕES DE PRODUÇÃO
+// =======================================================================
+
+// Concluir produção
+$(document).on("click", ".btnConcluirProducao", function () {
+    let id = $(this).data("id");
+
+    $.post(`${API}/em_producao/${id}/finalizar`, function () {
+        alert("Produção concluída!");
+
+        carregarEmProducao();
+        if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
+    });
+});
+
+// Excluir produção da fila (devolve materiais)
+$(document).on("click", ".btnExcluirProducao", function () {
+    let id = $(this).data("id");
+
+    if (!confirm("Deseja remover este item da produção? Os materiais serão devolvidos ao estoque.")) return;
+
+    $.ajax({
+        url: `${API}/em_producao/${id}`,
+        method: "DELETE",
         success: function () {
-            alert(`Produção registrada! (${qtd} unidades). Estoque atualizado.`);
+            alert("Item removido da produção. Materiais devolvidos ao estoque.");
+            carregarEmProducao();
             if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
-            if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
-        },
-        error: function (xhr) {
-            alert("Erro: " + xhr.responseJSON.error);
         }
     });
 });
+
+});
+// ================================
+// EM PRODUÇÃO
+// ================================
+function carregarEmProducao() {
+    $.get(`${API}/em_producao`, function (data) {
+        atualizarTabelaEmProducao(data);
+    });
+}
+
+function atualizarTabelaEmProducao(lista) {
+    let tabela = $("#listaEmProducao");
+    tabela.html("");
+
+    lista.forEach(p => {
+        tabela.append(`
+            <tr>
+                <td>${p.id}</td>
+                <td>${p.nome_produto}</td>
+                <td>${p.tamanho}</td>
+                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
+                <td>${p.quantidade}</td>
+                <td>
+                    <button class="btnConcluirProducao" data-id="${p.id}">Concluído</button>
+                    <button class="btnExcluirProducao" data-id="${p.id}">Excluir</button>
+                </td>
+            </tr>
+        `);
+    });
+}
 
 // ================================
 // PRODUÇÕES
@@ -438,5 +512,6 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
 
