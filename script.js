@@ -296,7 +296,7 @@ $(document).on("click", ".btnEditarProduto", function () {
 
         if (novaQtd !== null && !isNaN(parseFloat(novaQtd))) {
             novosMateriais.push({
-                material_id: m.material_id,
+                material_id: m.material_id || m.id,
                 quantidade: parseFloat(novaQtd)
             });
         }
@@ -541,6 +541,7 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
 
 
