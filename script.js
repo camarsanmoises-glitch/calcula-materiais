@@ -285,6 +285,23 @@ $(document).on("click", ".btnEditarProduto", function () {
     let nome = prompt("Nome:", prod.nome);
     let tamanho = prompt("Tamanho:", prod.tamanho);
 
+    // === EDITAR MATERIAIS ===
+    let novosMateriais = [];
+
+    prod.materiais.forEach((m) => {
+        let novaQtd = prompt(
+            `Material: ${m.nome}\nQuantidade atual (g): ${m.quantidade}\nNova quantidade (g):`,
+            m.quantidade
+        );
+
+        if (novaQtd !== null && !isNaN(parseFloat(novaQtd))) {
+            novosMateriais.push({
+                material_id: m.material_id,
+                quantidade: parseFloat(novaQtd)
+            });
+        }
+    });
+
     $.ajax({
         url: `${API}/produtos/${id}`,
         method: "PUT",
@@ -292,16 +309,20 @@ $(document).on("click", ".btnEditarProduto", function () {
         data: JSON.stringify({
             nome,
             tamanho,
-            materiais: prod.materiais
+            materiais: novosMateriais
         }),
         success: function () {
             if ($("#tabelaProdutosLista").is(":visible")) {
                 carregarProdutos();
             }
             alert("Produto atualizado!");
+        },
+        error: function (xhr) {
+            alert("Erro ao atualizar: " + xhr.responseText);
         }
     });
 });
+
 
 // ================================
 // EXCLUIR PRODUTO
