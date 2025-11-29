@@ -380,7 +380,7 @@ $(document).on("click", ".btnProduzir", function () {
             alert("Erro: " + xhr.responseText);
         }
     });
-}); // ✔ FINALMENTE FECHADO!
+}); 
 
 // =======================================================================
 // AÇÕES DE PRODUÇÃO
@@ -412,6 +412,7 @@ $(document).on("click", ".btnExcluirProducao", function () {
             carregarEmProducao();
             if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
         }
+
     });
 });
 
@@ -528,8 +529,10 @@ $("#btnGerarRelatorio").click(function () {
 
         let tabela = $("#relatorioProducoes");
         tabela.html("");
+
         filtradas.forEach(p => {
-            tabela.append(`
+            // Linha da produção
+            let row = $(`
                 <tr>
                     <td>${p.id}</td>
                     <td>${p.nome_produto}</td>
@@ -538,9 +541,27 @@ $("#btnGerarRelatorio").click(function () {
                     <td>${new Date(p.data + "Z").toLocaleString()}</td>
                 </tr>
             `);
+            tabela.append(row);
+
+            // Linha dos materiais usados
+            $.get(`${API}/producoes/${p.id}/detalhes`, function(materiais) {
+                materiais.forEach(m => {
+                    tabela.append(`
+                        <tr class="detalheMaterial">
+                            <td></td>
+                            <td>→ ${m.material_nome}</td>
+                            <td>R$ ${parseFloat(m.valor_total).toFixed(2)}</td>
+                            <td>${m.quantidade_usada}</td>
+                            <td>R$ ${parseFloat(m.valor_unitario).toFixed(2)} cada</td>
+                        </tr>
+                    `);
+                });
+            });
         });
     });
 });
+
+
 
 
 
