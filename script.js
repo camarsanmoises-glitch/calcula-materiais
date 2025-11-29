@@ -523,7 +523,7 @@ $("#btnGerarRelatorio").click(function () {
         }
 
         const filtradas = lista.filter(p => {
-            const dataProd = new Date(p.data + "Z");
+            const dataProd = new Date(p.data); // ✅ corrigido
             return dataProd >= inicio && dataProd <= fim;
         });
 
@@ -538,7 +538,7 @@ $("#btnGerarRelatorio").click(function () {
                     <td>${p.nome_produto}</td>
                     <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                     <td>${p.quantidade}</td>
-                    <td>${new Date(p.data + "Z").toLocaleString()}</td>
+                    <td>${new Date(p.data).toLocaleString()}</td> <!-- ✅ corrigido -->
                 </tr>
             `);
             tabela.append(row);
@@ -560,7 +560,6 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
-
 
 
 
