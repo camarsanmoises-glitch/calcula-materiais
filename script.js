@@ -259,11 +259,21 @@ function atualizarTabelaProdutos() {
     tabela.html("");
 
     produtos.forEach(p => {
+        // Monta string detalhando os materiais
+        let materiaisDetalhe = p.materiais.map(m => {
+            let nome = m.nome; // nome do material
+            let qtd = parseFloat(m.quantidade).toFixed(2);
+            let valor = parseFloat(m.valor_grama).toFixed(2);
+            let custo = (valor * m.quantidade).toFixed(2);
+            return `${nome}: ${qtd}g (R$ ${custo})`;
+        }).join("<br>");
+
         tabela.append(`
             <tr>
                 <td>${p.id}</td>
                 <td>${p.nome}</td>
                 <td>${p.tamanho}</td>
+                <td>${materiaisDetalhe}</td>
                 <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                 <td>
                     <button class="btnProduzir" data-id="${p.id}">Produzir</button>
@@ -560,6 +570,7 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
 
 
