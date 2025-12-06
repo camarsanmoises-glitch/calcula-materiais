@@ -285,6 +285,7 @@ function atualizarTabelaProdutos() {
     });
 }
 
+
 // ================================
 // EDITAR PRODUTO
 // ================================
@@ -476,7 +477,8 @@ function atualizarTabelaProducoes(lista) {
                 <td>${p.nome_produto}</td>
                 <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                 <td>${p.quantidade}</td>
-                <td>${new Date(p.data + "Z").toLocaleString()}</td>
+                <td>${new Date(p.data).toLocaleString()}</td>
+
             </tr>
         `);
     });
@@ -570,11 +572,3 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
-
-
-
-
-
-
-
-
