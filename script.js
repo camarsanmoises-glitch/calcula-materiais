@@ -397,25 +397,30 @@ $(document).on("click", ".btnProduzir", function () {
 // AÇÕES DE PRODUÇÃO
 // =======================================================================
 
-// Concluir produção
+// Concluir produção (versão com captura de erro do backend)
 $(document).on("click", ".btnConcluirProducao", function () {
     let id = $(this).data("id");
 
-    $.ajax({
-        url: `${API}/em_producao/${id}/finalizar`,
+    fetch(`${API}/em_producao/${id}/finalizar`, {
         method: "POST",
-        success: function () {
-            alert("Produção concluída!");
-            carregarEmProducao();
-            if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
-        },
-        error: function (xhr) {
-            // ← AQUI aparece sua mensagem do backend
-            alert(xhr.responseText);
+        headers: { "Content-Type": "application/json" }
+    })
+    .then(async res => {
+        if (!res.ok) {
+            let erro = await res.json();
+            alert(erro.error); // 🛑 Mostra exatamente: "Produção Interrompida: O material X está em falta!"
+            return;
         }
+
+        alert("Produção concluída!");
+        carregarEmProducao();
+        if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erro inesperado ao finalizar produção.");
     });
 });
-
 
 // Excluir produção da fila (devolve materiais)
 $(document).on("click", ".btnExcluirProducao", function () {
@@ -580,4 +585,5 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
 
