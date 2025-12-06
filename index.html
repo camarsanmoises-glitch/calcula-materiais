@@ -136,46 +136,93 @@
         </div>
     </section>
 
-    <!-- ==================== RELATÓRIO DE PRODUÇÕES ==================== -->
-    <section class="box">
-        <h2>Gerar Relatório de Produções</h2>
+ <!-- ==================== RELATÓRIO DE PRODUÇÕES ==================== -->
+<section class="box">
+    <h2>Gerar Relatório de Produções</h2>
 
-        <label>Filtro:</label>
-        <select id="filtroRelatorio">
-            <option value="diario">Diário</option>
-            <option value="semanal">Semanal</option>
-            <option value="mensal">Mensal</option>
-            <option value="anual">Anual</option>
-            <option value="periodo">Período específico</option>
-        </select>
+    <label>Filtro:</label>
+    <select id="filtroRelatorio">
+        <option value="diario">Diário</option>
+        <option value="semanal">Semanal</option>
+        <option value="mensal">Mensal</option>
+        <option value="anual">Anual</option>
+        <option value="periodo">Período específico</option>
+    </select>
 
-        <div id="filtroPeriodo" style="display:none; margin-top:10px;">
-            <label>Data inicial:</label>
-            <input type="date" id="dataInicial">
-            <label>Data final:</label>
-            <input type="date" id="dataFinal">
-        </div>
+    <div id="filtroPeriodo" style="display:none; margin-top:10px;">
+        <label>Data inicial:</label>
+        <input type="date" id="dataInicial">
+        <label>Data final:</label>
+        <input type="date" id="dataFinal">
+    </div>
 
-        <button id="btnGerarRelatorio">Gerar Relatório</button>
+    <button id="btnGerarRelatorio">Gerar Relatório</button>
 
-        <h3>Resultado do Relatório</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Produto</th>
-                    <th>Custo Total</th>
-                    <th>Quantidade</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody id="relatorioProducoes"></tbody>
-        </table>
-    </section>
+    <h3>Resultado do Relatório</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Produto</th>
+                <th>Custo Total</th>
+                <th>Quantidade</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody id="relatorioProducoes"></tbody>
+    </table>
+</section>
+
+<!-- ==================== RELATÓRIO DE ESTOQUE ==================== -->
+<section class="box">
+    <h2>Gerar Relatório de Estoque</h2>
+
+    <label>Material:</label>
+    <select id="filtroMaterialEstoque">
+        <option value="">Todos</option>
+        <!-- Os materiais podem ser populados via JS -->
+    </select>
+
+    <label>Filtro:</label>
+    <select id="filtroRelatorioEstoque">
+        <option value="diario">Diário</option>
+        <option value="semanal">Semanal</option>
+        <option value="mensal">Mensal</option>
+        <option value="anual">Anual</option>
+        <option value="periodo">Período específico</option>
+    </select>
+
+    <div id="filtroPeriodoEstoque" style="display:none; margin-top:10px;">
+        <label>Data inicial:</label>
+        <input type="date" id="dataInicialEstoque">
+        <label>Data final:</label>
+        <input type="date" id="dataFinalEstoque">
+    </div>
+
+    <button id="btnGerarRelatorioEstoque">Gerar Relatório de Estoque</button>
+
+    <h3>Resultado do Relatório de Estoque</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Material</th>
+                <th>Tipo</th>
+                <th>Quantidade</th>
+                <th>Estoque Antes</th>
+                <th>Estoque Depois</th>
+                <th>Origem</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody id="relatorioEstoque"></tbody>
+    </table>
+</section>
 
     <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
