@@ -500,6 +500,7 @@ function atualizarTabelaProducoes(lista) {
 // ================================
 // RELATÓRIO DE PRODUÇÕES
 // ================================
+
 $("#filtroRelatorio").change(function () {
     if ($(this).val() === "periodo") {
         $("#filtroPeriodo").show();
@@ -522,69 +523,153 @@ $("#btnGerarRelatorio").click(function () {
                 inicio = new Date(hoje.setHours(0, 0, 0, 0));
                 fim = new Date(hoje.setHours(23, 59, 59, 999));
                 break;
+
             case "semanal":
-                let primeiroDia = hoje.getDate() - hoje.getDay();
-                inicio = new Date(hoje.setDate(primeiroDia));
+                const diaSemana = hoje.getDay();
+                inicio = new Date(hoje);
+                inicio.setDate(hoje.getDate() - diaSemana);
                 inicio.setHours(0, 0, 0, 0);
                 fim = new Date();
                 break;
+
             case "mensal":
                 inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
                 fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
                 break;
+
             case "anual":
                 inicio = new Date(hoje.getFullYear(), 0, 1);
                 fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
                 break;
+
             case "periodo":
                 if (!dataInicial || !dataFinal) {
                     alert("Selecione as datas inicial e final");
                     return;
                 }
                 inicio = new Date(dataInicial);
-                fim = new Date(dataFinal);
-                fim.setHours(23, 59, 59, 999);
+                fim = new Date(dataFinal + " 23:59:59");
                 break;
         }
 
+        // Filtra produções por data
         const filtradas = lista.filter(p => {
-            const dataProd = new Date(p.data); // ✅ corrigido
+            const dataProd = new Date(p.data);
             return dataProd >= inicio && dataProd <= fim;
         });
 
         let tabela = $("#relatorioProducoes");
         tabela.html("");
 
+        // Acumuladores
+        let totalProdutos = {};
+        let totalMateriais = {};
+        let totalGeralMateriais = 0;
+
+        // Processar cada produção
+        let processadas = 0;
+
         filtradas.forEach(p => {
-            // Linha da produção
-            let row = $(`
-                <tr>
+            // Acumula quantidade do produto
+            if (!totalProdutos[p.nome_produto])
+                totalProdutos[p.nome_produto] = 0;
+
+            totalProdutos[p.nome_produto] += Number(p.quantidade);
+
+            // Exibir linha da produção
+            tabela.append(`
+                <tr style="background:#eef;">
                     <td>${p.id}</td>
-                    <td>${p.nome_produto}</td>
+                    <td><b>${p.nome_produto}</b></td>
                     <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                     <td>${p.quantidade}</td>
-                    <td>${new Date(p.data).toLocaleString()}</td> <!-- ✅ corrigido -->
+                    <td>${new Date(p.data).toLocaleString()}</td>
                 </tr>
             `);
-            tabela.append(row);
 
-            // Linha dos materiais usados
-            $.get(`${API}/producoes/${p.id}/detalhes`, function(materiais) {
+            // Buscar materiais usados
+            $.get(`${API}/producoes_detalhes?producao_id=${p.id}`, function (materiais) {
+
                 materiais.forEach(m => {
                     tabela.append(`
                         <tr class="detalheMaterial">
                             <td></td>
                             <td>→ ${m.material_nome}</td>
                             <td>R$ ${parseFloat(m.valor_total).toFixed(2)}</td>
-                            <td>${m.quantidade_usada}</td>
-                            <td>R$ ${parseFloat(m.valor_unitario).toFixed(2)} cada</td>
+                            <td>${m.quantidade_usada} g</td>
+                            <td>R$ ${parseFloat(m.valor_unitario).toFixed(2)} /g</td>
                         </tr>
                     `);
+
+                    // Acumular materiais
+                    if (!totalMateriais[m.material_nome]) {
+                        totalMateriais[m.material_nome] = {
+                            quantidade: 0,
+                            custo: 0
+                        };
+                    }
+
+                    totalMateriais[m.material_nome].quantidade += Number(m.quantidade_usada);
+                    totalMateriais[m.material_nome].custo += Number(m.valor_total);
+
+                    totalGeralMateriais += Number(m.valor_total);
                 });
+
+                processadas++;
+                if (processadas === filtradas.length) {
+                    exibirTotais();
+                }
             });
         });
+
+        // Exibir totais finais
+        function exibirTotais() {
+
+            tabela.append(`
+                <tr style="background:#ccc;">
+                    <td colspan="5"><b>TOTAIS DE PRODUTOS</b></td>
+                </tr>
+            `);
+
+            Object.keys(totalProdutos).forEach(prod => {
+                tabela.append(`
+                    <tr>
+                        <td></td>
+                        <td>${prod}</td>
+                        <td></td>
+                        <td><b>${totalProdutos[prod]}</b></td>
+                        <td></td>
+                    </tr>
+                `);
+            });
+
+            tabela.append(`
+                <tr style="background:#ccc;">
+                    <td colspan="5"><b>TOTAIS DE MATERIAIS</b></td>
+                </tr>
+            `);
+
+            Object.keys(totalMateriais).forEach(mat => {
+                tabela.append(`
+                    <tr>
+                        <td></td>
+                        <td>${mat}</td>
+                        <td>R$ ${totalMateriais[mat].custo.toFixed(2)}</td>
+                        <td>${totalMateriais[mat].quantidade} g</td>
+                        <td></td>
+                    </tr>
+                `);
+            });
+
+            tabela.append(`
+                <tr style="background:#bbb;">
+                    <td colspan="5"><b>VALOR TOTAL DOS MATERIAIS: R$ ${totalGeralMateriais.toFixed(2)}</b></td>
+                </tr>
+            `);
+        }
     });
 });
+
 
 // ================================
 // RELATÓRIO DE ESTOQUE
@@ -677,5 +762,3 @@ $("#btnGerarRelatorioEstoque").click(function () {
         });
     });
 });
-
-
