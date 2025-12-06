@@ -401,13 +401,21 @@ $(document).on("click", ".btnProduzir", function () {
 $(document).on("click", ".btnConcluirProducao", function () {
     let id = $(this).data("id");
 
-    $.post(`${API}/em_producao/${id}/finalizar`, function () {
-        alert("Produção concluída!");
-
-        carregarEmProducao();
-        if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
+    $.ajax({
+        url: `${API}/em_producao/${id}/finalizar`,
+        method: "POST",
+        success: function () {
+            alert("Produção concluída!");
+            carregarEmProducao();
+            if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
+        },
+        error: function (xhr) {
+            // ← AQUI aparece sua mensagem do backend
+            alert(xhr.responseText);
+        }
     });
 });
+
 
 // Excluir produção da fila (devolve materiais)
 $(document).on("click", ".btnExcluirProducao", function () {
@@ -572,3 +580,4 @@ $("#btnGerarRelatorio").click(function () {
         });
     });
 });
+
