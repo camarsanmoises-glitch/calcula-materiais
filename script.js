@@ -586,4 +586,96 @@ $("#btnGerarRelatorio").click(function () {
     });
 });
 
+// ================================
+// RELATÓRIO DE ESTOQUE
+// ================================
+
+// Mostrar campos de período quando necessário
+$("#filtroRelatorioEstoque").change(function () {
+    if ($(this).val() === "periodo") {
+        $("#filtroPeriodoEstoque").show();
+    } else {
+        $("#filtroPeriodoEstoque").hide();
+    }
+});
+
+// Carregar lista de materiais no select
+$.get(`${API}/materiais`, function(materiais) {
+    materiais.forEach(m => {
+        $("#filtroMaterialEstoque").append(`
+            <option value="${m.id}">${m.nome}</option>
+        `);
+    });
+});
+
+// Gerar relatório de estoque
+$("#btnGerarRelatorioEstoque").click(function () {
+    const filtro = $("#filtroRelatorioEstoque").val();
+    const materialId = $("#filtroMaterialEstoque").val();
+    let dataInicial = $("#dataInicialEstoque").val();
+    let dataFinal = $("#dataFinalEstoque").val();
+
+    $.get(`${API}/estoque`, function(lista) {
+        let hoje = new Date();
+        let inicio, fim;
+
+        // Definir período
+        switch (filtro) {
+            case "diario":
+                inicio = new Date(hoje.setHours(0, 0, 0, 0));
+                fim = new Date(hoje.setHours(23, 59, 59, 999));
+                break;
+            case "semanal":
+                let primeiroDia = hoje.getDate() - hoje.getDay();
+                inicio = new Date(hoje.setDate(primeiroDia));
+                inicio.setHours(0, 0, 0, 0);
+                fim = new Date();
+                break;
+            case "mensal":
+                inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
+                break;
+            case "anual":
+                inicio = new Date(hoje.getFullYear(), 0, 1);
+                fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
+                break;
+            case "periodo":
+                if (!dataInicial || !dataFinal) {
+                    alert("Selecione as datas inicial e final");
+                    return;
+                }
+                inicio = new Date(dataInicial);
+                fim = new Date(dataFinal);
+                fim.setHours(23, 59, 59, 999);
+                break;
+        }
+
+        // Filtrar lista
+        const filtradas = lista.filter(e => {
+            const dataMov = new Date(e.data_movimentacao); // campo correto
+            if (materialId && e.material_id.toString() !== materialId) return false;
+            return dataMov >= inicio && dataMov <= fim;
+        });
+
+        // Preencher tabela
+        let tabela = $("#relatorioEstoque");
+        tabela.html("");
+
+        filtradas.forEach(e => {
+            tabela.append(`
+                <tr>
+                    <td>${e.id}</td>
+                    <td>${e.material_nome}</td>
+                    <td>${e.tipo}</td>
+                    <td>${e.quantidade}</td>
+                    <td>${e.estoque_antes}</td>
+                    <td>${e.estoque_depois}</td>
+                    <td>${e.origem}</td>
+                    <td>${new Date(e.data_movimentacao).toLocaleString()}</td>
+                </tr>
+            `);
+        });
+    });
+});
+
 
