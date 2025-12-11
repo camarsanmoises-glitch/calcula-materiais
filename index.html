@@ -173,18 +173,13 @@
     </table>
 </section>
 
-<!-- ==================== RELATÓRIO DE ESTOQUE ==================== -->
+<!-- ==================== RELATÓRIO GERAL ==================== -->
 <section class="box">
-    <h2>Gerar Relatório de Estoque</h2>
+    <h2>Relatório Geral</h2>
 
-    <label>Material:</label>
-    <select id="filtroMaterialEstoque">
-        <option value="">Todos</option>
-        <!-- Os materiais podem ser populados via JS -->
-    </select>
-
+    <!-- FILTROS -->
     <label>Filtro:</label>
-    <select id="filtroRelatorioEstoque">
+    <select id="filtroRelatorioGeral">
         <option value="diario">Diário</option>
         <option value="semanal">Semanal</option>
         <option value="mensal">Mensal</option>
@@ -192,31 +187,60 @@
         <option value="periodo">Período específico</option>
     </select>
 
-    <div id="filtroPeriodoEstoque" style="display:none; margin-top:10px;">
+    <div id="filtroPeriodoGeral" style="display:none; margin-top:10px;">
         <label>Data inicial:</label>
-        <input type="date" id="dataInicialEstoque">
+        <input type="date" id="dataInicialGeral">
         <label>Data final:</label>
-        <input type="date" id="dataFinalEstoque">
+        <input type="date" id="dataFinalGeral">
     </div>
 
-    <button id="btnGerarRelatorioEstoque">Gerar Relatório de Estoque</button>
+    <button id="btnGerarRelatorioGeral">Gerar Relatório Geral</button>
 
-    <h3>Resultado do Relatório de Estoque</h3>
+    <!-- ==================== TABELA PRINCIPAL: PRODUTO + MATERIAIS ==================== -->
+    <h3>Resumo por Produto (com materiais utilizados)</h3>
+
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Material</th>
-                <th>Tipo</th>
-                <th>Quantidade</th>
-                <th>Estoque Antes</th>
-                <th>Estoque Depois</th>
-                <th>Origem</th>
-                <th>Data</th>
+                <th>Produto</th>
+                <th>Quantidade Produzida</th>
+                <th>Valor Total dos Produtos (R$)</th>
+                <th>Total de Materiais Usados (g)</th>
+                <th>Custo Total dos Materiais (R$)</th>
+                <th>Total Geral (R$)</th>
             </tr>
         </thead>
-        <tbody id="relatorioEstoque"></tbody>
+        <tbody id="tabelaResumoProdutosMateriais"></tbody>
     </table>
+
+    <!-- ==================== RESUMO GERAL DE MATERIAIS ==================== -->
+    <h3>Resumo Geral de Materiais</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Material</th>
+                <th>Total Usado (g)</th>
+                <th>Preço Total (R$)</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaResumoMateriais"></tbody>
+    </table>
+
+    <!-- ==================== TOTAL GERAL ==================== -->
+    <h3>Total Geral</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Categoria</th>
+                <th>Quantidade Total</th>
+                <th>Preço Total (R$)</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaTotalGeral"></tbody>
+    </table>
+
 </section>
 
     <script src="script.js"></script>
