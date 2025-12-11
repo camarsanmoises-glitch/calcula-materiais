@@ -692,19 +692,17 @@ $.get(`${API}/materiais`, function (materiais) {
 });
 
 // -------------------------------------------------
-// GERAR RELATÓRIO GERAL
+// GERAR RELATÓRIO GERAL (PRODUTOS + MATERIAIS)
 // -------------------------------------------------
 $("#btnGerarRelatorioGeral").click(function () {
-
     const filtro = $("#filtroRelatorioGeral").val();
+    const dataInicial = $("#dataInicialGeral").val();
+    const dataFinal = $("#dataFinalGeral").val();
+    const materialId = $("#filtroMaterialEstoque").val(); // opcional
 
-    let dataInicial = $("#dataInicialGeral").val();
-    let dataFinal = $("#dataFinalGeral").val();
-
-    // -------------- GERAR DATAS AUTOMÁTICAS ----------------
+    // -------------- GERAR DATAS ----------------
     let hoje = new Date();
-    let inicio = null;
-    let fim = null;
+    let inicio, fim;
 
     switch (filtro) {
         case "diario":
@@ -715,7 +713,7 @@ $("#btnGerarRelatorioGeral").click(function () {
             break;
 
         case "semanal":
-            let diaSemana = hoje.getDay();
+            const diaSemana = hoje.getDay();
             inicio = new Date(hoje);
             inicio.setDate(hoje.getDate() - diaSemana);
             inicio.setHours(0, 0, 0, 0);
@@ -724,14 +722,12 @@ $("#btnGerarRelatorioGeral").click(function () {
 
         case "mensal":
             inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-            fim.setHours(23, 59, 59);
+            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
             break;
 
         case "anual":
             inicio = new Date(hoje.getFullYear(), 0, 1);
-            fim = new Date(hoje.getFullYear(), 11, 31);
-            fim.setHours(23, 59, 59);
+            fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
             break;
 
         case "periodo":
@@ -745,80 +741,59 @@ $("#btnGerarRelatorioGeral").click(function () {
     }
 
     // --------------------------------------
-    // MONTAR QUERY STRING COM FILTRO DE MATERIAL
+    // URLs da API
     // --------------------------------------
-    let params = [];
-    let materialId = $("#filtroMaterialEstoque").val(); // pega material selecionado
+    let paramsEstoque = [`data_inicio=${inicio.toISOString().slice(0, 10)}`, `data_fim=${fim.toISOString().slice(0, 10)}`];
+    if (materialId) paramsEstoque.push(`material_id=${materialId}`);
 
-    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
-    if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
-    if (materialId) params.push(`material_id=${materialId}`); // adiciona filtro por material
-
-    const url = `${API}/estoque?${params.join("&")}`;
+    const urlEstoque = `${API}/estoque?${paramsEstoque.join("&")}`;
+    const urlMateriais = `${API}/producoes_detalhes?data_inicio=${inicio.toISOString().slice(0,10)}&data_fim=${fim.toISOString().slice(0,10)}`;
 
     // --------------------------------------
-    // CHAMAR API
+    // Buscar produtos + materiais em paralelo
     // --------------------------------------
-    $.get(url, function (lista) {
+    Promise.all([
+        $.get(urlEstoque),
+        $.get(urlMateriais)
+    ]).then(([listaProdutos, listaMateriais]) => {
 
-        // Limpando tabelas
+        // Limpar tabelas
         $("#tabelaResumoProdutosMateriais").html("");
         $("#tabelaResumoMateriais").html("");
         $("#tabelaTotalGeral").html("");
 
-        // Acumuladores
-        let produtos = {};
-        let materiais = {};
-        let totalGeral = 0;
+        // ----------------------------
+        // Processar produtos
+        // ----------------------------
+        let produtosAcumulados = {};
+        let totalGeralProdutos = 0;
 
-        lista.forEach(item => {
-
+        listaProdutos.forEach(item => {
             let nomeProd = item.nome_produto || "";
             let qtdProd = Number(item.qtd_produto || 0);
             let precoProd = Number(item.preco_produto || 0);
-
             let nomeMat = item.material_nome || "";
             let qtdMat = Number(item.qtd_material || 0);
             let precoMat = Number(item.preco_material || 0);
 
-            // ----------- PRODUTOS -----------
             if (qtdProd > 0) {
-                if (!produtos[nomeProd]) {
-                    produtos[nomeProd] = {
-                        qtd: 0,
-                        preco: 0,
-                        totalMateriais: 0,
-                        custoMateriais: 0
-                    };
+                if (!produtosAcumulados[nomeProd]) {
+                    produtosAcumulados[nomeProd] = { qtd: 0, preco: 0, totalMateriais: 0, custoMateriais: 0 };
                 }
-                produtos[nomeProd].qtd += qtdProd;
-                produtos[nomeProd].preco += precoProd;
+                produtosAcumulados[nomeProd].qtd += qtdProd;
+                produtosAcumulados[nomeProd].preco += precoProd;
             }
 
-            // ----------- MATERIAIS -----------
-            if (qtdMat > 0) {
-                if (!materiais[nomeMat]) {
-                    materiais[nomeMat] = { qtd: 0, preco: 0 };
-                }
-                materiais[nomeMat].qtd += qtdMat;
-                materiais[nomeMat].preco += precoMat;
-
-                // adicionar custo do material ao produto correspondente, se existir
-                if (nomeProd && produtos[nomeProd]) {
-                    produtos[nomeProd].totalMateriais += qtdMat;
-                    produtos[nomeProd].custoMateriais += precoMat;
-                }
+            if (qtdMat > 0 && nomeProd) {
+                produtosAcumulados[nomeProd].totalMateriais += qtdMat;
+                produtosAcumulados[nomeProd].custoMateriais += precoMat;
             }
 
-            // ----------- TOTAL GERAL -----------
-            totalGeral += precoProd + precoMat;
+            totalGeralProdutos += precoProd + precoMat;
         });
 
-        // --------------------------------------
-        // TABELA PRINCIPAL: PRODUTOS + MATERIAIS
-        // --------------------------------------
-        Object.keys(produtos).forEach(nome => {
-            let p = produtos[nome];
+        Object.keys(produtosAcumulados).forEach(nome => {
+            let p = produtosAcumulados[nome];
             $("#tabelaResumoProdutosMateriais").append(`
                 <tr>
                     <td>${nome}</td>
@@ -831,11 +806,27 @@ $("#btnGerarRelatorioGeral").click(function () {
             `);
         });
 
-        // --------------------------------------
-        // RESUMO GERAL DE MATERIAIS
-        // --------------------------------------
-        Object.keys(materiais).forEach(nome => {
-            let m = materiais[nome];
+        // ----------------------------
+        // Processar materiais
+        // ----------------------------
+        let materiaisResumo = {};
+        let totalGeralMateriais = 0;
+
+        listaMateriais.forEach(d => {
+            let nome = d.material_nome;
+            let qtd = Number(d.quantidade_usada || 0);
+            let valor = Number(d.valor_total || 0);
+
+            if (!materiaisResumo[nome]) materiaisResumo[nome] = { qtd: 0, preco: 0 };
+
+            materiaisResumo[nome].qtd += qtd;
+            materiaisResumo[nome].preco += valor;
+
+            totalGeralMateriais += valor;
+        });
+
+        Object.keys(materiaisResumo).forEach(nome => {
+            let m = materiaisResumo[nome];
             $("#tabelaResumoMateriais").append(`
                 <tr>
                     <td>${nome}</td>
@@ -845,17 +836,19 @@ $("#btnGerarRelatorioGeral").click(function () {
             `);
         });
 
-        // --------------------------------------
-        // TOTAL GERAL
-        // --------------------------------------
+        // ----------------------------
+        // Total geral
+        // ----------------------------
         $("#tabelaTotalGeral").html(`
             <tr>
                 <td>Geral</td>
                 <td>-</td>
-                <td>R$ ${totalGeral.toFixed(2)}</td>
+                <td>R$ ${(totalGeralProdutos + totalGeralMateriais).toFixed(2)}</td>
             </tr>
         `);
 
+    }).catch(err => {
+        console.error(err);
+        alert("Erro ao gerar relatório geral.");
     });
-
 });
