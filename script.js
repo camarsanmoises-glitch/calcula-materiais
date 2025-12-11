@@ -692,15 +692,14 @@ $.get(`${API}/materiais`, function (materiais) {
 });
 
 // -------------------------------------------------
-// GERAR RELATÓRIO
+// GERAR RELATÓRIO GERAL
 // -------------------------------------------------
-$("#btnGerarRelatorioEstoque").click(function () {
+$("#btnGerarRelatorioGeral").click(function () {
 
-    const filtro = $("#filtroRelatorioEstoque").val();
-    const materialId = $("#filtroMaterialEstoque").val();
+    const filtro = $("#filtroRelatorioGeral").val();
 
-    let dataInicial = $("#dataInicialEstoque").val();
-    let dataFinal = $("#dataFinalEstoque").val();
+    let dataInicial = $("#dataInicialGeral").val();
+    let dataFinal = $("#dataFinalGeral").val();
 
     // -------------- GERAR DATAS AUTOMÁTICAS ----------------
     let hoje = new Date();
@@ -711,17 +710,15 @@ $("#btnGerarRelatorioEstoque").click(function () {
         case "diario":
             inicio = new Date();
             inicio.setHours(0, 0, 0, 0);
-
             fim = new Date();
             fim.setHours(23, 59, 59, 999);
             break;
 
         case "semanal":
-            let diaSemana = hoje.getDay(); // 0=Domingo
+            let diaSemana = hoje.getDay();
             inicio = new Date(hoje);
             inicio.setDate(hoje.getDate() - diaSemana);
             inicio.setHours(0, 0, 0, 0);
-
             fim = new Date();
             break;
 
@@ -752,7 +749,6 @@ $("#btnGerarRelatorioEstoque").click(function () {
     // --------------------------------------
     let params = [];
 
-    if (materialId) params.push(`material_id=${materialId}`);
     if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
     if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
 
@@ -763,80 +759,95 @@ $("#btnGerarRelatorioEstoque").click(function () {
     // --------------------------------------
     $.get(url, function (lista) {
 
-        // Limpando tabelas
-        $("#tabelaTotaisProdutos").html("");
-        $("#tabelaTotaisMateriais").html("");
-        $("#tabelaTotaisGerais").html("");
+        // Limpando tabelas corretas
+        $("#tabelaResumoProdutosMateriais").html("");
+        $("#tabelaResumoMateriais").html("");
+        $("#tabelaTotalGeral").html("");
 
         // Acumuladores
-        let totaisProdutos = {};
-        let totaisMateriais = {};
+        let produtos = {};
+        let materiais = {};
 
-        let totalGeral = 0; // SOMENTE PREÇO
+        let totalGeral = 0;
 
-        // --------------------------------------
-        // PROCESSAR ITENS
-        // --------------------------------------
         lista.forEach(item => {
 
-            // ===== PRODUTOS =====
+            // ========== PRODUTOS ==========
             if (item.nome_produto && item.qtd_produto > 0) {
 
-                if (!totaisProdutos[item.nome_produto]) {
-                    totaisProdutos[item.nome_produto] = { qtd: 0, preco: 0 };
+                if (!produtos[item.nome_produto]) {
+                    produtos[item.nome_produto] = {
+                        qtd: 0,
+                        preco: 0,
+                        totalMateriais: 0,
+                        custoMateriais: 0
+                    };
                 }
 
-                totaisProdutos[item.nome_produto].qtd += Number(item.qtd_produto);
-                totaisProdutos[item.nome_produto].preco += Number(item.preco_produto);
+                produtos[item.nome_produto].qtd += Number(item.qtd_produto);
+                produtos[item.nome_produto].preco += Number(item.preco_produto);
 
                 totalGeral += Number(item.preco_produto);
             }
 
-            // ===== MATERIAIS =====
+            // ========== MATERIAIS ==========
             if (item.nome_material && item.qtd_material > 0) {
 
-                if (!totaisMateriais[item.nome_material]) {
-                    totaisMateriais[item.nome_material] = { qtd: 0, preco: 0 };
+                if (!materiais[item.nome_material]) {
+                    materiais[item.nome_material] = { qtd: 0, preco: 0 };
                 }
 
-                totaisMateriais[item.nome_material].qtd += Number(item.qtd_material);
-                totaisMateriais[item.nome_material].preco += Number(item.preco_material);
+                materiais[item.nome_material].qtd += Number(item.qtd_material);
+                materiais[item.nome_material].preco += Number(item.preco_material);
 
                 totalGeral += Number(item.preco_material);
+
+                // adicionar ao produto correspondente
+                if (produtos[item.nome_produto]) {
+                    produtos[item.nome_produto].totalMateriais += Number(item.qtd_material);
+                    produtos[item.nome_produto].custoMateriais += Number(item.preco_material);
+                }
             }
         });
 
         // --------------------------------------
-        // MONTAR TABELA DE PRODUTOS
+        // TABELA PRINCIPAL: PRODUTOS + MATERIAIS
         // --------------------------------------
-        Object.keys(totaisProdutos).forEach(nome => {
-            $("#tabelaTotaisProdutos").append(`
+        Object.keys(produtos).forEach(nome => {
+            let p = produtos[nome];
+            $("#tabelaResumoProdutosMateriais").append(`
                 <tr>
                     <td>${nome}</td>
-                    <td>${totaisProdutos[nome].qtd}</td>
-                    <td>R$ ${totaisProdutos[nome].preco.toFixed(2)}</td>
+                    <td>${p.qtd}</td>
+                    <td>R$ ${p.preco.toFixed(2)}</td>
+                    <td>${p.totalMateriais} g</td>
+                    <td>R$ ${p.custoMateriais.toFixed(2)}</td>
+                    <td>R$ ${(p.preco + p.custoMateriais).toFixed(2)}</td>
                 </tr>
             `);
         });
 
         // --------------------------------------
-        // MONTAR TABELA DE MATERIAIS
+        // RESUMO GERAL DE MATERIAIS
         // --------------------------------------
-        Object.keys(totaisMateriais).forEach(nome => {
-            $("#tabelaTotaisMateriais").append(`
+        Object.keys(materiais).forEach(nome => {
+            let m = materiais[nome];
+            $("#tabelaResumoMateriais").append(`
                 <tr>
                     <td>${nome}</td>
-                    <td>${totaisMateriais[nome].qtd}</td>
-                    <td>R$ ${totaisMateriais[nome].preco.toFixed(2)}</td>
+                    <td>${m.qtd} g</td>
+                    <td>R$ ${m.preco.toFixed(2)}</td>
                 </tr>
             `);
         });
 
         // --------------------------------------
-        // TOTAL GERAL (SOMENTE R$)
+        // TOTAL GERAL
         // --------------------------------------
-        $("#tabelaTotaisGerais").html(`
+        $("#tabelaTotalGeral").html(`
             <tr>
+                <td>Geral</td>
+                <td>-</td>
                 <td>R$ ${totalGeral.toFixed(2)}</td>
             </tr>
         `);
@@ -844,5 +855,3 @@ $("#btnGerarRelatorioEstoque").click(function () {
     });
 
 });
-
-
