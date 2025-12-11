@@ -744,15 +744,18 @@ $("#btnGerarRelatorioGeral").click(function () {
             break;
     }
 
-    // --------------------------------------
-    // MONTAR QUERY STRING
-    // --------------------------------------
-    let params = [];
+// --------------------------------------
+// MONTAR QUERY STRING COM FILTRO DE MATERIAL
+// --------------------------------------
+let params = [];
+let materialId = $("#filtroMaterialEstoque").val(); // pega material selecionado
 
-    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
-    if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
+if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
+if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
+if (materialId) params.push(`material_id=${materialId}`); // adiciona filtro por material
 
-    const url = `${API}/estoque?${params.join("&")}`;
+const url = `${API}/estoque?${params.join("&")}`;
+
 
     // --------------------------------------
     // CHAMAR API
