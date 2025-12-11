@@ -672,7 +672,7 @@ $("#btnGerarRelatorio").click(function () {
 
 
 // ================================
-// RELATÓRIO DE ESTOQUE
+// RELATÓRIO GERAL (PRODUTOS + MATERIAIS)
 // ================================
 
 // Mostrar campos de período quando necessário
@@ -684,7 +684,9 @@ $("#filtroRelatorioEstoque").change(function () {
     }
 });
 
-// Carregar lista de materiais no select
+// -------------------------------------------------
+// Carregar materiais (opcional, apenas para filtro)
+// -------------------------------------------------
 $.get(`${API}/materiais`, function(materiais) {
     materiais.forEach(m => {
         $("#filtroMaterialEstoque").append(`
@@ -693,72 +695,140 @@ $.get(`${API}/materiais`, function(materiais) {
     });
 });
 
-// Gerar relatório de estoque
+// -------------------------------------------------
+// GERAR RELATÓRIO GERAL
+// -------------------------------------------------
 $("#btnGerarRelatorioEstoque").click(function () {
+
     const filtro = $("#filtroRelatorioEstoque").val();
     const materialId = $("#filtroMaterialEstoque").val();
+
     let dataInicial = $("#dataInicialEstoque").val();
     let dataFinal = $("#dataFinalEstoque").val();
 
-    $.get(`${API}/estoque`, function(lista) {
-        let hoje = new Date();
-        let inicio, fim;
+    // Definir datas automáticas
+    let hoje = new Date();
+    let inicio, fim;
 
-        // Definir período
-        switch (filtro) {
-            case "diario":
-                inicio = new Date(hoje.setHours(0, 0, 0, 0));
-                fim = new Date(hoje.setHours(23, 59, 59, 999));
-                break;
-            case "semanal":
-                let primeiroDia = hoje.getDate() - hoje.getDay();
-                inicio = new Date(hoje.setDate(primeiroDia));
-                inicio.setHours(0, 0, 0, 0);
-                fim = new Date();
-                break;
-            case "mensal":
-                inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-                fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
-                break;
-            case "anual":
-                inicio = new Date(hoje.getFullYear(), 0, 1);
-                fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
-                break;
-            case "periodo":
-                if (!dataInicial || !dataFinal) {
-                    alert("Selecione as datas inicial e final");
-                    return;
+    switch (filtro) {
+        case "diario":
+            inicio = new Date(hoje.setHours(0,0,0,0));
+            fim = new Date(hoje.setHours(23,59,59,999));
+            break;
+
+        case "semanal":
+            let primeiroDia = hoje.getDate() - hoje.getDay();
+            inicio = new Date(hoje.setDate(primeiroDia));
+            inicio.setHours(0,0,0,0);
+            fim = new Date();
+            break;
+
+        case "mensal":
+            inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            fim = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0, 23,59,59);
+            break;
+
+        case "anual":
+            inicio = new Date(hoje.getFullYear(), 0, 1);
+            fim = new Date(hoje.getFullYear(), 11, 31, 23,59,59);
+            break;
+
+        case "periodo":
+            if (!dataInicial || !dataFinal) {
+                alert("Selecione as datas!");
+                return;
+            }
+            inicio = new Date(dataInicial + " 00:00:00");
+            fim = new Date(dataFinal + " 23:59:59");
+            break;
+    }
+
+    let params = [];
+
+    if (materialId) params.push(`material_id=${materialId}`);
+    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0,10)}`);
+    if (fim) params.push(`data_fim=${fim.toISOString().slice(0,10)}`);
+
+    const url = `${API}/estoque?${params.join("&")}`;
+
+    $.get(url, function(lista) {
+
+        // ====================================
+        // ESTRUTURAS PARA SOMAR TOTAIS
+        // ====================================
+        let totaisProdutos = {};
+        let totaisMateriais = {};
+
+        let totalGeralQtd = 0;
+        let totalGeralPreco = 0;
+
+        // ====================================
+        // PROCESSAR DADOS
+        // ====================================
+        lista.forEach(item => {
+
+            // ---------- Produtos ----------
+            if (item.nome_produto) {
+                if (!totaisProdutos[item.nome_produto]) {
+                    totaisProdutos[item.nome_produto] = { qtd: 0, preco: 0 };
                 }
-                inicio = new Date(dataInicial);
-                fim = new Date(dataFinal);
-                fim.setHours(23, 59, 59, 999);
-                break;
-        }
 
-        // Filtrar lista
-        const filtradas = lista.filter(e => {
-            const dataMov = new Date(e.data_movimentacao); // campo correto
-            if (materialId && e.material_id.toString() !== materialId) return false;
-            return dataMov >= inicio && dataMov <= fim;
+                totaisProdutos[item.nome_produto].qtd += Number(item.qtd_produto);
+                totaisProdutos[item.nome_produto].preco += Number(item.preco_produto);
+
+                totalGeralQtd += Number(item.qtd_produto);
+                totalGeralPreco += Number(item.preco_produto);
+            }
+
+            // ---------- Materiais ----------
+            if (item.nome_material) {
+                if (!totaisMateriais[item.nome_material]) {
+                    totaisMateriais[item.nome_material] = { qtd: 0, preco: 0 };
+                }
+
+                totaisMateriais[item.nome_material].qtd += Number(item.qtd_material);
+                totaisMateriais[item.nome_material].preco += Number(item.preco_material);
+
+                totalGeralQtd += Number(item.qtd_material);
+                totalGeralPreco += Number(item.preco_material);
+            }
         });
 
-        // Preencher tabela
-        let tabela = $("#relatorioEstoque");
-        tabela.html("");
+        // ====================================
+        // Preencher Tabelas
+        // ====================================
+        let tblProd = $("#tabelaTotaisProdutos");
+        tblProd.html("");
 
-        filtradas.forEach(e => {
-            tabela.append(`
+        Object.keys(totaisProdutos).forEach(nome => {
+            tblProd.append(`
                 <tr>
-                    <td>${e.id}</td>
-                    <td>${e.material_nome}</td>
-                    <td>${e.tipo}</td>
-                    <td>${e.quantidade}</td>
-                    <td>${e.estoque_antes}</td>
-                    <td>${e.estoque_depois}</td>
-                    <td>${e.origem}</td>
-                    <td>${new Date(e.data_movimentacao).toLocaleString()}</td>
+                    <td>${nome}</td>
+                    <td>${totaisProdutos[nome].qtd}</td>
+                    <td>R$ ${totaisProdutos[nome].preco.toFixed(2)}</td>
                 </tr>
             `);
         });
+
+        let tblMat = $("#tabelaTotaisMateriais");
+        tblMat.html("");
+
+        Object.keys(totaisMateriais).forEach(nome => {
+            tblMat.append(`
+                <tr>
+                    <td>${nome}</td>
+                    <td>${totaisMateriais[nome].qtd}</td>
+                    <td>R$ ${totaisMateriais[nome].preco.toFixed(2)}</td>
+                </tr>
+            `);
+        });
+
+        $("#tabelaTotaisGerais").html(`
+            <tr>
+                <td>${totalGeralQtd}</td>
+                <td>R$ ${totalGeralPreco.toFixed(2)}</td>
+            </tr>
+        `);
     });
+
 });
