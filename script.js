@@ -744,25 +744,24 @@ $("#btnGerarRelatorioGeral").click(function () {
             break;
     }
 
-// --------------------------------------
-// MONTAR QUERY STRING COM FILTRO DE MATERIAL
-// --------------------------------------
-let params = [];
-let materialId = $("#filtroMaterialEstoque").val(); // pega material selecionado
+    // --------------------------------------
+    // MONTAR QUERY STRING COM FILTRO DE MATERIAL
+    // --------------------------------------
+    let params = [];
+    let materialId = $("#filtroMaterialEstoque").val(); // pega material selecionado
 
-if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
-if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
-if (materialId) params.push(`material_id=${materialId}`); // adiciona filtro por material
+    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
+    if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
+    if (materialId) params.push(`material_id=${materialId}`); // adiciona filtro por material
 
-const url = `${API}/estoque?${params.join("&")}`;
-
+    const url = `${API}/estoque?${params.join("&")}`;
 
     // --------------------------------------
     // CHAMAR API
     // --------------------------------------
     $.get(url, function (lista) {
 
-        // Limpando tabelas corretas
+        // Limpando tabelas
         $("#tabelaResumoProdutosMateriais").html("");
         $("#tabelaResumoMateriais").html("");
         $("#tabelaTotalGeral").html("");
@@ -770,47 +769,49 @@ const url = `${API}/estoque?${params.join("&")}`;
         // Acumuladores
         let produtos = {};
         let materiais = {};
-
         let totalGeral = 0;
 
         lista.forEach(item => {
 
-            // ========== PRODUTOS ==========
-            if (item.nome_produto && item.qtd_produto > 0) {
+            let nomeProd = item.nome_produto || "";
+            let qtdProd = Number(item.qtd_produto || 0);
+            let precoProd = Number(item.preco_produto || 0);
 
-                if (!produtos[item.nome_produto]) {
-                    produtos[item.nome_produto] = {
+            let nomeMat = item.material_nome || "";
+            let qtdMat = Number(item.qtd_material || 0);
+            let precoMat = Number(item.preco_material || 0);
+
+            // ----------- PRODUTOS -----------
+            if (qtdProd > 0) {
+                if (!produtos[nomeProd]) {
+                    produtos[nomeProd] = {
                         qtd: 0,
                         preco: 0,
                         totalMateriais: 0,
                         custoMateriais: 0
                     };
                 }
-
-                produtos[item.nome_produto].qtd += Number(item.qtd_produto);
-                produtos[item.nome_produto].preco += Number(item.preco_produto);
-
-                totalGeral += Number(item.preco_produto);
+                produtos[nomeProd].qtd += qtdProd;
+                produtos[nomeProd].preco += precoProd;
             }
 
-            // ========== MATERIAIS ==========
-            if (item.nome_material && item.qtd_material > 0) {
-
-                if (!materiais[item.nome_material]) {
-                    materiais[item.nome_material] = { qtd: 0, preco: 0 };
+            // ----------- MATERIAIS -----------
+            if (qtdMat > 0) {
+                if (!materiais[nomeMat]) {
+                    materiais[nomeMat] = { qtd: 0, preco: 0 };
                 }
+                materiais[nomeMat].qtd += qtdMat;
+                materiais[nomeMat].preco += precoMat;
 
-                materiais[item.nome_material].qtd += Number(item.qtd_material);
-                materiais[item.nome_material].preco += Number(item.preco_material);
-
-                totalGeral += Number(item.preco_material);
-
-                // adicionar ao produto correspondente
-                if (produtos[item.nome_produto]) {
-                    produtos[item.nome_produto].totalMateriais += Number(item.qtd_material);
-                    produtos[item.nome_produto].custoMateriais += Number(item.preco_material);
+                // adicionar custo do material ao produto correspondente, se existir
+                if (nomeProd && produtos[nomeProd]) {
+                    produtos[nomeProd].totalMateriais += qtdMat;
+                    produtos[nomeProd].custoMateriais += precoMat;
                 }
             }
+
+            // ----------- TOTAL GERAL -----------
+            totalGeral += precoProd + precoMat;
         });
 
         // --------------------------------------
