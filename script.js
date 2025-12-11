@@ -671,23 +671,19 @@ $("#btnGerarRelatorio").click(function () {
 });
 
 
-// ================================
+// ============================================
 // RELATÓRIO GERAL (PRODUTOS + MATERIAIS)
-// ================================
+// ============================================
 
 // Mostrar campos de período quando necessário
 $("#filtroRelatorioEstoque").change(function () {
-    if ($(this).val() === "periodo") {
-        $("#filtroPeriodoEstoque").show();
-    } else {
-        $("#filtroPeriodoEstoque").hide();
-    }
+    $("#filtroPeriodoEstoque").toggle($(this).val() === "periodo");
 });
 
 // -------------------------------------------------
-// Carregar materiais (opcional, apenas para filtro)
+// Carregar materiais no filtro
 // -------------------------------------------------
-$.get(`${API}/materiais`, function(materiais) {
+$.get(`${API}/materiais`, function (materiais) {
     materiais.forEach(m => {
         $("#filtroMaterialEstoque").append(`
             <option value="${m.id}">${m.nome}</option>
@@ -696,7 +692,7 @@ $.get(`${API}/materiais`, function(materiais) {
 });
 
 // -------------------------------------------------
-// GERAR RELATÓRIO GERAL
+// GERAR RELATÓRIO
 // -------------------------------------------------
 $("#btnGerarRelatorioEstoque").click(function () {
 
@@ -706,31 +702,39 @@ $("#btnGerarRelatorioEstoque").click(function () {
     let dataInicial = $("#dataInicialEstoque").val();
     let dataFinal = $("#dataFinalEstoque").val();
 
-    // Definir datas automáticas
+    // -------------- GERAR DATAS AUTOMÁTICAS ----------------
     let hoje = new Date();
-    let inicio, fim;
+    let inicio = null;
+    let fim = null;
 
     switch (filtro) {
         case "diario":
-            inicio = new Date(hoje.setHours(0,0,0,0));
-            fim = new Date(hoje.setHours(23,59,59,999));
+            inicio = new Date();
+            inicio.setHours(0, 0, 0, 0);
+
+            fim = new Date();
+            fim.setHours(23, 59, 59, 999);
             break;
 
         case "semanal":
-            let primeiroDia = hoje.getDate() - hoje.getDay();
-            inicio = new Date(hoje.setDate(primeiroDia));
-            inicio.setHours(0,0,0,0);
+            let diaSemana = hoje.getDay(); // 0=Domingo
+            inicio = new Date(hoje);
+            inicio.setDate(hoje.getDate() - diaSemana);
+            inicio.setHours(0, 0, 0, 0);
+
             fim = new Date();
             break;
 
         case "mensal":
             inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-            fim = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0, 23,59,59);
+            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+            fim.setHours(23, 59, 59);
             break;
 
         case "anual":
             inicio = new Date(hoje.getFullYear(), 0, 1);
-            fim = new Date(hoje.getFullYear(), 11, 31, 23,59,59);
+            fim = new Date(hoje.getFullYear(), 11, 31);
+            fim.setHours(23, 59, 59);
             break;
 
         case "periodo":
@@ -738,37 +742,46 @@ $("#btnGerarRelatorioEstoque").click(function () {
                 alert("Selecione as datas!");
                 return;
             }
-            inicio = new Date(dataInicial + " 00:00:00");
-            fim = new Date(dataFinal + " 23:59:59");
+            inicio = new Date(`${dataInicial} 00:00:00`);
+            fim = new Date(`${dataFinal} 23:59:59`);
             break;
     }
 
+    // --------------------------------------
+    // MONTAR QUERY STRING
+    // --------------------------------------
     let params = [];
 
     if (materialId) params.push(`material_id=${materialId}`);
-    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0,10)}`);
-    if (fim) params.push(`data_fim=${fim.toISOString().slice(0,10)}`);
+    if (inicio) params.push(`data_inicio=${inicio.toISOString().slice(0, 10)}`);
+    if (fim) params.push(`data_fim=${fim.toISOString().slice(0, 10)}`);
 
     const url = `${API}/estoque?${params.join("&")}`;
 
-    $.get(url, function(lista) {
+    // --------------------------------------
+    // CHAMAR API
+    // --------------------------------------
+    $.get(url, function (lista) {
 
-        // ====================================
-        // ESTRUTURAS PARA SOMAR TOTAIS
-        // ====================================
+        // Limpando tabelas
+        $("#tabelaTotaisProdutos").html("");
+        $("#tabelaTotaisMateriais").html("");
+        $("#tabelaTotaisGerais").html("");
+
+        // Acumuladores
         let totaisProdutos = {};
         let totaisMateriais = {};
 
-        let totalGeralQtd = 0;
-        let totalGeralPreco = 0;
+        let totalGeral = 0; // SOMENTE PREÇO
 
-        // ====================================
-        // PROCESSAR DADOS
-        // ====================================
+        // --------------------------------------
+        // PROCESSAR ITENS
+        // --------------------------------------
         lista.forEach(item => {
 
-            // ---------- Produtos ----------
-            if (item.nome_produto) {
+            // ===== PRODUTOS =====
+            if (item.nome_produto && item.qtd_produto > 0) {
+
                 if (!totaisProdutos[item.nome_produto]) {
                     totaisProdutos[item.nome_produto] = { qtd: 0, preco: 0 };
                 }
@@ -776,12 +789,12 @@ $("#btnGerarRelatorioEstoque").click(function () {
                 totaisProdutos[item.nome_produto].qtd += Number(item.qtd_produto);
                 totaisProdutos[item.nome_produto].preco += Number(item.preco_produto);
 
-                totalGeralQtd += Number(item.qtd_produto);
-                totalGeralPreco += Number(item.preco_produto);
+                totalGeral += Number(item.preco_produto);
             }
 
-            // ---------- Materiais ----------
-            if (item.nome_material) {
+            // ===== MATERIAIS =====
+            if (item.nome_material && item.qtd_material > 0) {
+
                 if (!totaisMateriais[item.nome_material]) {
                     totaisMateriais[item.nome_material] = { qtd: 0, preco: 0 };
                 }
@@ -789,19 +802,15 @@ $("#btnGerarRelatorioEstoque").click(function () {
                 totaisMateriais[item.nome_material].qtd += Number(item.qtd_material);
                 totaisMateriais[item.nome_material].preco += Number(item.preco_material);
 
-                totalGeralQtd += Number(item.qtd_material);
-                totalGeralPreco += Number(item.preco_material);
+                totalGeral += Number(item.preco_material);
             }
         });
 
-        // ====================================
-        // Preencher Tabelas
-        // ====================================
-        let tblProd = $("#tabelaTotaisProdutos");
-        tblProd.html("");
-
+        // --------------------------------------
+        // MONTAR TABELA DE PRODUTOS
+        // --------------------------------------
         Object.keys(totaisProdutos).forEach(nome => {
-            tblProd.append(`
+            $("#tabelaTotaisProdutos").append(`
                 <tr>
                     <td>${nome}</td>
                     <td>${totaisProdutos[nome].qtd}</td>
@@ -810,11 +819,11 @@ $("#btnGerarRelatorioEstoque").click(function () {
             `);
         });
 
-        let tblMat = $("#tabelaTotaisMateriais");
-        tblMat.html("");
-
+        // --------------------------------------
+        // MONTAR TABELA DE MATERIAIS
+        // --------------------------------------
         Object.keys(totaisMateriais).forEach(nome => {
-            tblMat.append(`
+            $("#tabelaTotaisMateriais").append(`
                 <tr>
                     <td>${nome}</td>
                     <td>${totaisMateriais[nome].qtd}</td>
@@ -823,12 +832,17 @@ $("#btnGerarRelatorioEstoque").click(function () {
             `);
         });
 
+        // --------------------------------------
+        // TOTAL GERAL (SOMENTE R$)
+        // --------------------------------------
         $("#tabelaTotaisGerais").html(`
             <tr>
-                <td>${totalGeralQtd}</td>
-                <td>R$ ${totalGeralPreco.toFixed(2)}</td>
+                <td>R$ ${totalGeral.toFixed(2)}</td>
             </tr>
         `);
+
     });
 
 });
+
+
