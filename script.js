@@ -812,8 +812,8 @@ $(document).ready(function () {
 // ============================================
 $("#btnBaixarPDF").on("click", function () {
 
-    // ✅ verificação correta
-    if ($("#tabelaResumoProdutosMateriais tr").length === 0) {
+    // ✅ verifica se o relatório foi realmente gerado
+    if ($("#tabelaResumoProdutosMateriais tbody tr").length === 0) {
         alert("Gere o relatório antes de baixar o PDF.");
         return;
     }
@@ -834,7 +834,7 @@ $("#btnBaixarPDF").on("click", function () {
     // TABELA 1 — PRODUTOS
     // ==============================
     doc.autoTable({
-        html: "#tblResumoProdutos",
+        html: "#tabelaResumoProdutosMateriais",
         startY: 28,
         theme: "grid",
         styles: { fontSize: 8 }
@@ -846,7 +846,7 @@ $("#btnBaixarPDF").on("click", function () {
     let y = doc.lastAutoTable.finalY + 10;
 
     doc.autoTable({
-        html: "#tblResumoMateriais",
+        html: "#tabelaResumoMateriais",
         startY: y,
         theme: "grid",
         styles: { fontSize: 8 }
@@ -858,7 +858,7 @@ $("#btnBaixarPDF").on("click", function () {
     y = doc.lastAutoTable.finalY + 10;
 
     doc.autoTable({
-        html: "#tblTotalGeral",
+        html: "#tabelaTotalGeral",
         startY: y,
         theme: "grid",
         styles: { fontSize: 9 }
@@ -866,5 +866,6 @@ $("#btnBaixarPDF").on("click", function () {
 
     doc.save("relatorio-geral.pdf");
 });
+
 
 
