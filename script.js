@@ -806,6 +806,69 @@ $(document).ready(function () {
     });
 
 });
+// ============================================
+// GERAR PDF DO RELATÓRIO GERAL
+// ============================================
+$("#btnBaixarPDF").on("click", function () {
+
+    if ($("#tabelaResumoProdutosMateriais tr").length === 0) {
+        alert("Gere o relatório antes de baixar o PDF.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
+
+    let dataAgora = new Date().toLocaleString("pt-BR");
+
+    // TÍTULO
+    doc.setFontSize(14);
+    doc.text("Relatório Geral de Produção", 14, 15);
+
+    doc.setFontSize(9);
+    doc.text(`Gerado em: ${dataAgora}`, 14, 22);
+
+    // ==============================
+    // TABELA 1 — PRODUTOS
+    // ==============================
+    doc.autoTable({
+        html: "table:eq(3)", // tabela de produtos
+        startY: 28,
+        theme: "grid",
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 123, 255] }
+    });
+
+    // ==============================
+    // TABELA 2 — MATERIAIS
+    // ==============================
+    let y = doc.lastAutoTable.finalY + 10;
+
+    doc.autoTable({
+        html: "table:eq(4)", // tabela de materiais
+        startY: y,
+        theme: "grid",
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [40, 167, 69] }
+    });
+
+    // ==============================
+    // TABELA 3 — TOTAL GERAL
+    // ==============================
+    y = doc.lastAutoTable.finalY + 10;
+
+    doc.autoTable({
+        html: "table:eq(5)", // tabela total geral
+        startY: y,
+        theme: "grid",
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [220, 53, 69] }
+    });
+
+    doc.save("relatorio-geral.pdf");
+});
+
+
 
 
 
