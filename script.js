@@ -471,14 +471,23 @@ function atualizarTabelaEmProducao(lista) {
 }
 
 // ================================
-// PRODUÇÕES
+// PRODUÇÕES 
 // ================================
-function carregarProducoes() {
-    $.get(`${API}/producoes`, function (data) {
-        atualizarTabelaProducoes(data);
-    });
-}
 
+// Mostrar / esconder período
+$("#filtroProducoes").change(function () {
+    if ($(this).val() === "periodo") {
+        $("#filtroPeriodoProducoes").slideDown();
+    } else {
+        $("#filtroPeriodoProducoes").slideUp();
+        $("#dataInicialProducoes").val("");
+        $("#dataFinalProducoes").val("");
+    }
+});
+
+// --------------------------------
+// Atualizar tabela (SEU CÓDIGO)
+// --------------------------------
 function atualizarTabelaProducoes(lista) {
     let tabela = $("#listaProducoes");
     tabela.html("");
@@ -491,11 +500,83 @@ function atualizarTabelaProducoes(lista) {
                 <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
                 <td>${p.quantidade}</td>
                 <td>${new Date(p.data).toLocaleString()}</td>
-
             </tr>
         `);
     });
 }
+
+// --------------------------------
+// Carregar produções (AJUSTADO)
+// --------------------------------
+function carregarProducoes(dataInicio = null, dataFim = null) {
+
+    let url = `${API}/producoes`;
+
+    if (dataInicio && dataFim) {
+        url += `?data_inicio=${dataInicio}&data_fim=${dataFim}`;
+    }
+
+    $.get(url, function (data) {
+        atualizarTabelaProducoes(data);
+        $("#tabelaProducoesLista").slideDown();
+    });
+}
+
+// --------------------------------
+// BOTÃO MOSTRAR PRODUÇÕES
+// --------------------------------
+$("#btnMostrarProducoes").click(function () {
+
+    const filtro = $("#filtroProducoes").val();
+    const dataInicial = $("#dataInicialProducoes").val();
+    const dataFinal = $("#dataFinalProducoes").val();
+
+    let hoje = new Date();
+    let inicio, fim;
+
+    switch (filtro) {
+
+        case "diario":
+            inicio = new Date();
+            inicio.setHours(0, 0, 0, 0);
+            fim = new Date();
+            fim.setHours(23, 59, 59, 999);
+            break;
+
+        case "semanal":
+            const diaSemana = hoje.getDay();
+            inicio = new Date(hoje);
+            inicio.setDate(hoje.getDate() - diaSemana);
+            inicio.setHours(0, 0, 0, 0);
+            fim = new Date();
+            break;
+
+        case "mensal":
+            inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
+            break;
+
+        case "anual":
+            inicio = new Date(hoje.getFullYear(), 0, 1);
+            fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
+            break;
+
+        case "periodo":
+            if (!dataInicial || !dataFinal) {
+                alert("Selecione a data inicial e final");
+                return;
+            }
+            inicio = new Date(`${dataInicial} 00:00:00`);
+            fim = new Date(`${dataFinal} 23:59:59`);
+            break;
+    }
+
+    carregarProducoes(
+        inicio.toISOString().slice(0, 10),
+        fim.toISOString().slice(0, 10)
+    );
+});
+
 
 
 // ============================================
@@ -725,6 +806,8 @@ $(document).ready(function () {
     });
 
 });
+
+
 
 
 
