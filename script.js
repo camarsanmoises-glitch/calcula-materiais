@@ -806,12 +806,13 @@ $(document).ready(function () {
     });
 
 });
+
 // ============================================
 // GERAR PDF DO RELATÓRIO GERAL
 // ============================================
 $("#btnBaixarPDF").on("click", function () {
 
-    if ($("#tabelaResumoProdutosMateriais tr").length === 0) {
+    if ($("#tabelaResumoProdutosMateriais tbody tr").length === 0) {
         alert("Gere o relatório antes de baixar o PDF.");
         return;
     }
@@ -829,10 +830,10 @@ $("#btnBaixarPDF").on("click", function () {
     doc.text(`Gerado em: ${dataAgora}`, 14, 22);
 
     // ==============================
-    // TABELA 1 — PRODUTOS
+    // TABELA 1 — PRODUTOS + MATERIAIS
     // ==============================
     doc.autoTable({
-        html: "table:eq(3)", // tabela de produtos
+        html: "#tabelaResumoProdutosMateriais",
         startY: 28,
         theme: "grid",
         styles: { fontSize: 8 },
@@ -840,12 +841,12 @@ $("#btnBaixarPDF").on("click", function () {
     });
 
     // ==============================
-    // TABELA 2 — MATERIAIS
+    // TABELA 2 — RESUMO GERAL DE MATERIAIS
     // ==============================
     let y = doc.lastAutoTable.finalY + 10;
 
     doc.autoTable({
-        html: "table:eq(4)", // tabela de materiais
+        html: "#tabelaResumoMateriais",
         startY: y,
         theme: "grid",
         styles: { fontSize: 8 },
@@ -858,7 +859,7 @@ $("#btnBaixarPDF").on("click", function () {
     y = doc.lastAutoTable.finalY + 10;
 
     doc.autoTable({
-        html: "table:eq(5)", // tabela total geral
+        html: "#tabelaTotalGeral",
         startY: y,
         theme: "grid",
         styles: { fontSize: 9 },
@@ -867,6 +868,9 @@ $("#btnBaixarPDF").on("click", function () {
 
     doc.save("relatorio-geral.pdf");
 });
+
+
+
 
 
 
