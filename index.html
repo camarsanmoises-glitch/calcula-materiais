@@ -12,96 +12,91 @@
     <!-- PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-
 </head>
 <body>
 
-    <h1>Gerenciamento de Materiais e Produtos</h1>
+<h1>Gerenciamento de Materiais e Produtos</h1>
 
-    <!-- ==================== MATERIAIS ==================== -->
-    <section class="box">
-        <h2>Cadastrar Material</h2>
+<!-- ==================== MATERIAIS ==================== -->
+<section class="box">
+    <h2>Cadastrar Material</h2>
 
-        <label>Nome:</label>
-        <input type="text" id="matNome">
+    <label>Nome:</label>
+    <input type="text" id="matNome">
 
-        <label>Cor:</label>
-        <input type="text" id="matCor">
+    <label>Cor:</label>
+    <input type="text" id="matCor">
 
-        <label>Valor por grama (R$):</label>
-        <input type="number" id="matValor" step="0.01">
+    <label>Valor por grama (R$):</label>
+    <input type="number" id="matValor" step="0.01">
 
-        <label>Quantidade em estoque (g):</label>
-        <input type="number" id="matQtd" step="0.01">
+    <label>Quantidade em estoque (g):</label>
+    <input type="number" id="matQtd" step="0.01">
 
-        <button id="addMaterial">Cadastrar Material</button>
+    <button id="addMaterial">Cadastrar Material</button>
+    <button id="btnMostrarMateriais">Mostrar Materiais Cadastrados</button>
 
-        <!-- Botão para mostrar/esconder tabela -->
-        <button id="btnMostrarMateriais">Mostrar Materiais Cadastrados</button>
-
-        <div id="tabelaMateriaisLista" style="display:none;">
-            <h3>Materiais cadastrados</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="listaMateriais"></tbody>
-            </table>
-        </div>
-    </section>
-
-    <!-- ==================== PRODUTOS ==================== -->
-    <section class="box">
-        <h2>Cadastrar Produto</h2>
-
-        <label>Nome:</label>
-        <input type="text" id="prodNome">
-
-        <label>Tamanho:</label>
-        <input type="text" id="prodTam">
-
-        <h3>Materiais do Produto</h3>
-        <table>
+    <div id="tabelaMateriaisLista" style="display:none;">
+        <h3>Materiais cadastrados</h3>
+        <table id="tabelaMateriais">
             <thead>
                 <tr>
-                    <th>Material</th><th>Qtd (g)</th><th>Custo</th><th>Ação</th>
+                    <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
                 </tr>
             </thead>
-            <tbody id="tabelaMateriaisProd"></tbody>
+            <tbody id="listaMateriais"></tbody>
         </table>
+    </div>
+</section>
 
-        <button id="addLinhaMat">Adicionar Material</button>
+<!-- ==================== PRODUTOS ==================== -->
+<section class="box">
+    <h2>Cadastrar Produto</h2>
 
-        <h3>Custo Total: R$ <span id="totalCusto">0.00</span></h3>
+    <label>Nome:</label>
+    <input type="text" id="prodNome">
 
-        <button id="addProduto">Cadastrar Produto</button>
+    <label>Tamanho:</label>
+    <input type="text" id="prodTam">
 
-        <!-- Botão para mostrar/esconder tabela de produtos -->
-        <button id="btnMostrarProdutos">Mostrar Lista de Produtos</button>
+    <h3>Materiais do Produto</h3>
+    <table id="tabelaMateriaisProduto">
+        <thead>
+            <tr>
+                <th>Material</th><th>Qtd (g)</th><th>Custo</th><th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaMateriaisProd"></tbody>
+    </table>
 
-        <div id="tabelaProdutosLista" style="display:none;">
-            <h3>Lista de Produtos</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th><th>NOME</th><th>TAMANHO</th><th>MATERIAL</th><th>TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody id="listaProdutos"></tbody>
-            </table>
-        </div>
-    </section>
-    <!-- ==================== EM PRODUÇÃO ==================== -->
+    <button id="addLinhaMat">Adicionar Material</button>
+
+    <h3>Custo Total: R$ <span id="totalCusto">0.00</span></h3>
+
+    <button id="addProduto">Cadastrar Produto</button>
+    <button id="btnMostrarProdutos">Mostrar Lista de Produtos</button>
+
+    <div id="tabelaProdutosLista" style="display:none;">
+        <h3>Lista de Produtos</h3>
+        <table id="tabelaProdutos">
+            <thead>
+                <tr>
+                    <th>ID</th><th>NOME</th><th>TAMANHO</th><th>MATERIAL</th><th>TOTAL</th>
+                </tr>
+            </thead>
+            <tbody id="listaProdutos"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ==================== EM PRODUÇÃO ==================== -->
 <section class="box">
     <h2>Em Produção</h2>
 
-    <!-- Botão para mostrar/esconder -->
     <button id="btnMostrarEmProducao">Mostrar Itens em Produção</button>
 
     <div id="tabelaEmProducaoLista" style="display:none;">
-        <table>
+        <table id="tabelaEmProducao">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -117,11 +112,10 @@
     </div>
 </section>
 
+<!-- ==================== PRODUÇÕES ==================== -->
+<section class="box">
+    <h2>Produções Registradas</h2>
 
-    <!-- ==================== PRODUÇÕES ==================== -->
-    <section class="box">
-        <h2>Produções Registradas</h2>
-        <!-- FILTRO -->
     <label>Filtro:</label>
     <select id="filtroProducoes">
         <option value="diario">Diário</option>
@@ -131,64 +125,56 @@
         <option value="periodo">Período específico</option>
     </select>
 
-    <!-- PERÍODO -->
     <div id="filtroPeriodoProducoes" style="display:none; margin-top:10px;">
         <label>Data inicial:</label>
         <input type="date" id="dataInicialProducoes">
-
         <label>Data final:</label>
         <input type="date" id="dataFinalProducoes">
     </div>
 
+    <button id="btnMostrarProducoes">Mostrar Produções</button>
 
-        <!-- Botão para mostrar/esconder tabela de produções -->
-        <button id="btnMostrarProducoes">Mostrar Produções</button>
-
-        <div id="tabelaProducoesLista" style="display:none;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Produto</th>
-                        <th>Custo Total</th>
-                        <th>Quantidade</th>
-                        <th>Data</th>
-                    </tr>
-                </thead>
-                <tbody id="listaProducoes"></tbody>
-            </table>
-        </div>
-    </section>
+    <div id="tabelaProducoesLista" style="display:none;">
+        <table id="tabelaProducoes">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Produto</th>
+                    <th>Custo Total</th>
+                    <th>Quantidade</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody id="listaProducoes"></tbody>
+        </table>
+    </div>
+</section>
 
 <!-- ==================== RELATÓRIO GERAL ==================== -->
 <section class="box">
     <h2>Relatório Geral</h2>
 
-    <!-- FILTROS -->
     <label>Filtro:</label>
-<select id="filtroRelatorioGeral">
-    <option value="diario">Diário</option>
-    <option value="semanal">Semanal</option>
-    <option value="mensal">Mensal</option>
-    <option value="anual">Anual</option>
-    <option value="periodo">Período específico</option>
-</select>
+    <select id="filtroRelatorioGeral">
+        <option value="diario">Diário</option>
+        <option value="semanal">Semanal</option>
+        <option value="mensal">Mensal</option>
+        <option value="anual">Anual</option>
+        <option value="periodo">Período específico</option>
+    </select>
 
-<div id="filtroPeriodoGeral" style="display:none; margin-top:10px;">
-    <label>Data inicial:</label>
-    <input type="date" id="dataInicialGeral">
+    <div id="filtroPeriodoGeral" style="display:none; margin-top:10px;">
+        <label>Data inicial:</label>
+        <input type="date" id="dataInicialGeral">
+        <label>Data final:</label>
+        <input type="date" id="dataFinalGeral">
+    </div>
 
-    <label>Data final:</label>
-    <input type="date" id="dataFinalGeral">
-</div>
+    <button id="btnGerarRelatorioGeral">Gerar Relatório Geral</button>
+    <button id="btnBaixarPDF">Baixar Relatório em PDF</button>
 
-<button id="btnGerarRelatorioGeral">Gerar Relatório Geral</button>
-<button id="btnBaixarPDF">Baixar Relatório em PDF</button>
-
-    <!-- ==================== TABELA PRINCIPAL: PRODUTO + MATERIAIS ==================== -->
-    <h3>Resumo por Produto (com materiais utilizados)</h3>
-
-    <table>
+    <h3>Resumo por Produto</h3>
+    <table id="tabelaResumoProdutosMateriais">
         <thead>
             <tr>
                 <th>Produto</th>
@@ -199,13 +185,11 @@
                 <th>Total Geral (R$)</th>
             </tr>
         </thead>
-        <tbody id="tabelaResumoProdutosMateriais"></tbody>
+        <tbody></tbody>
     </table>
 
-    <!-- ==================== RESUMO GERAL DE MATERIAIS ==================== -->
     <h3>Resumo Geral de Materiais</h3>
-
-    <table>
+    <table id="tabelaResumoMateriais">
         <thead>
             <tr>
                 <th>Material</th>
@@ -213,13 +197,11 @@
                 <th>Preço Total (R$)</th>
             </tr>
         </thead>
-        <tbody id="tabelaResumoMateriais"></tbody>
+        <tbody></tbody>
     </table>
 
-    <!-- ==================== TOTAL GERAL ==================== -->
     <h3>Total Geral</h3>
-
-    <table>
+    <table id="tabelaTotalGeral">
         <thead>
             <tr>
                 <th>Categoria</th>
@@ -227,12 +209,11 @@
                 <th>Preço Total (R$)</th>
             </tr>
         </thead>
-        <tbody id="tabelaTotalGeral"></tbody>
+        <tbody></tbody>
     </table>
-
 </section>
 
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
 
