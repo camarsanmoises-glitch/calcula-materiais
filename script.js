@@ -114,7 +114,7 @@ $(document).on("click", ".btnEditarMaterial", function () {
 });
 
 // ================================
-// REPOR MATERIAL (CUSTO MÉDIO PONDERADO)
+// REPOR MATERIAL (ÚLTIMO CUSTO)
 // ================================
 $(document).on("click", ".btnReporMaterial", function () {
     let id = $(this).data("id");
@@ -128,12 +128,10 @@ $(document).on("click", ".btnReporMaterial", function () {
         return;
     }
 
-    let valorNovoLote = valorTotal / qtdExtra;
+    // 🔢 último custo substitui o antigo
+    let novoValorGrama = valorTotal / qtdExtra;
 
-    let novoValorGrama =
-        (mat.estoque * mat.valor_grama + qtdExtra * valorNovoLote) /
-        (mat.estoque + qtdExtra);
-
+    // 📦 soma estoque
     let novoEstoque = mat.estoque + qtdExtra;
 
     $.ajax({
@@ -146,11 +144,13 @@ $(document).on("click", ".btnReporMaterial", function () {
         }),
         success: function () {
             carregarMateriais();
-            alert("Estoque atualizado com custo médio!");
+            alert(
+                `Reposição concluída!\n` +
+                `Novo valor por grama: R$ ${novoValorGrama.toFixed(4)}`
+            );
         }
     });
 });
-
 // ================================
 // EXCLUIR MATERIAL
 // ================================
@@ -911,3 +911,4 @@ $("#btnBaixarPDF").on("click", function () {
 });
 
 });
+
