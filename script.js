@@ -75,8 +75,9 @@ function atualizarTabelaMateriais() {
                 <td>R$ ${parseFloat(m.valor_grama).toFixed(2)}</td>
                 <td>${parseFloat(m.estoque).toFixed(2)}</td>
                 <td>
-                    <button class="btnEditarMaterial" data-id="${m.id}">Editar</button>
-                    <button class="btnExcluirMaterial" data-id="${m.id}">Excluir</button>
+                    <button class="btnEditarMaterial" data-id="${m.id}">✏️ Editar</button>
+                    <button class="btnReporMaterial" data-id="${m.id}">📦 Repor</button>
+                    <button class="btnExcluirMaterial" data-id="${m.id}">🗑️ Excluir</button>
                 </td>
             </tr>
         `);
@@ -84,7 +85,7 @@ function atualizarTabelaMateriais() {
 }
 
 // ================================
-// EDITAR MATERIAL
+// EDITAR MATERIAL (APENAS DADOS CADASTRAIS)
 // ================================
 $(document).on("click", ".btnEditarMaterial", function () {
     let id = $(this).data("id");
@@ -92,8 +93,8 @@ $(document).on("click", ".btnEditarMaterial", function () {
 
     let nome = prompt("Nome:", mat.nome);
     let cor = prompt("Cor:", mat.cor);
-    let valor = parseFloat(prompt("Valor por grama:", mat.valor_grama));
-    let estoque = parseFloat(prompt("Estoque:", mat.estoque));
+
+    if (nome === null || cor === null) return;
 
     $.ajax({
         url: `${API}/materiais/${id}`,
@@ -101,15 +102,51 @@ $(document).on("click", ".btnEditarMaterial", function () {
         contentType: "application/json",
         data: JSON.stringify({
             nome,
-            cor,
-            valor_grama: valor,
-            estoque
+            cor
         }),
         success: function () {
             if ($("#tabelaMateriaisLista").is(":visible")) {
                 carregarMateriais();
             }
             alert("Material atualizado!");
+        }
+    });
+});
+
+// ================================
+// REPOR MATERIAL (CUSTO MÉDIO PONDERADO)
+// ================================
+$(document).on("click", ".btnReporMaterial", function () {
+    let id = $(this).data("id");
+    let mat = materiais.find(m => m.id == id);
+
+    let qtdExtra = parseFloat(prompt("Quantidade extra (g):"));
+    let valorTotal = parseFloat(prompt("Valor total pago (R$):"));
+
+    if (!qtdExtra || qtdExtra <= 0 || !valorTotal || valorTotal <= 0) {
+        alert("Valores inválidos.");
+        return;
+    }
+
+    let valorNovoLote = valorTotal / qtdExtra;
+
+    let novoValorGrama =
+        (mat.estoque * mat.valor_grama + qtdExtra * valorNovoLote) /
+        (mat.estoque + qtdExtra);
+
+    let novoEstoque = mat.estoque + qtdExtra;
+
+    $.ajax({
+        url: `${API}/materiais/${id}`,
+        method: "PUT",
+        contentType: "application/json",
+        data: JSON.stringify({
+            valor_grama: novoValorGrama,
+            estoque: novoEstoque
+        }),
+        success: function () {
+            carregarMateriais();
+            alert("Estoque atualizado com custo médio!");
         }
     });
 });
@@ -854,6 +891,8 @@ $("#btnBaixarPDF").on("click", function () {
 });
 
 });
+
+
 
 
 
