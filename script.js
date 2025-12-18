@@ -1,914 +1,655 @@
-// ================================
-// CONFIG
-// ================================
-const API = "https://camarsan.pythonanywhere.com";
+from datetime import datetime
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import mysql.connector
 
-let materiais = [];
-let produtos = [];
-
-// ================================
-// CARREGAMENTO INICIAL
-// ================================
-$(document).ready(function () {
-    // Tabelas só carregam quando o usuário clicar nos botões
-});
-
-// ================================
-// BOTÕES PARA MOSTRAR/OCULTAR
-// ================================
-$("#btnMostrarMateriais").click(function () {
-    $("#tabelaMateriaisLista").toggle();
-    if ($("#tabelaMateriaisLista").is(":visible")) {
-        carregarMateriais();
-    }
-});
-
-$("#btnMostrarProdutos").click(function () {
-    $("#tabelaProdutosLista").toggle();
-
-    if ($("#tabelaProdutosLista").is(":visible")) {
-
-        // ⚠️ carregue os materiais antes de permitir qualquer ação em produtos
-        carregarMateriais();
-
-        // só depois carregue os produtos
-        carregarProdutos();
-    }
-});
-
-
-$("#btnMostrarProducoes").click(function () {
-    $("#tabelaProducoesLista").toggle();
-    if ($("#tabelaProducoesLista").is(":visible")) {
-        carregarProducoes();
-    }
-});
-
-$("#btnMostrarEmProducao").click(function () {
-    $("#tabelaEmProducaoLista").toggle();
-    if ($("#tabelaEmProducaoLista").is(":visible")) {
-        carregarEmProducao();
-    }
-});
-
-
-// ================================
-// MATERIAIS
-// ================================
-function carregarMateriais() {
-    $.get(`${API}/materiais`, function (data) {
-        materiais = data;
-        atualizarTabelaMateriais();
-    });
+app = Flask(__name__)
+CORS(
+    app,
+    resources={r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": "*"
+    }}
+)
+# =====================================
+# CONFIGURAÇÃO DO BANCO
+# =====================================
+db_config = {
+    "user": "camarsan",
+    "password": "N@t17590744Nat",  # Substitua pela sua senha do MySQL
+    "host": "camarsan.mysql.pythonanywhere-services.com",
+    "database": "camarsan$calculafacil"
 }
 
-function atualizarTabelaMateriais() {
-    let tabela = $("#listaMateriais");
-    tabela.html("");
+def get_db_connection():
+    return mysql.connector.connect(**db_config)
 
-    materiais.forEach(m => {
-        tabela.append(`
-            <tr>
-                <td>${m.id}</td>
-                <td>${m.nome}</td>
-                <td>${m.cor}</td>
-                <td>R$ ${parseFloat(m.valor_grama).toFixed(2)}</td>
-                <td>${parseFloat(m.estoque).toFixed(2)}</td>
-                <td>
-                    <button class="btnEditarMaterial" data-id="${m.id}">✏️ Editar</button>
-                    <button class="btnReporMaterial" data-id="${m.id}">📦 Repor</button>
-                    <button class="btnExcluirMaterial" data-id="${m.id}">🗑️ Excluir</button>
-                </td>
-            </tr>
-        `);
-    });
-}
+# =====================================
+# MATERIAIS
+# =====================================
+@app.route("/materiais", methods=["GET"])
+def listar_materiais():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM materiais")
+    resultados = cursor.fetchall()
+    cursor.close()
+    conn.close()
 
-// ================================
-// EDITAR MATERIAL (APENAS DADOS CADASTRAIS)
-// ================================
-$(document).on("click", ".btnEditarMaterial", function () {
-    let id = $(this).data("id");
-    let mat = materiais.find(m => m.id == id);
+    # Correção aplicada aqui!
+    materiais = []
+    for row in resultados:
+        materiais.append({
+            "id": row["id"],
+            "nome": row["nome"],
+            "cor": row["cor"],
+            "valor_grama": row["valor_grama"] or 0,
+            "estoque": row["estoque"] or 0
+        })
 
-    let nome = prompt("Nome:", mat.nome);
-    let cor = prompt("Cor:", mat.cor);
+    return jsonify(materiais)
 
-    if (nome === null || cor === null) return;
 
-    $.ajax({
-        url: `${API}/materiais/${id}`,
-        method: "PUT",
-        contentType: "application/json",
-        data: JSON.stringify({
+@app.route("/materiais", methods=["POST"])
+def adicionar_material():
+    data = request.json
+
+    nome = data.get("nome")
+    cor = data.get("cor")
+
+    # Correção importante!
+    valor_grama = float(data.get("valor_grama") or 0)
+    estoque = float(data.get("estoque") or 0)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO materiais (nome, cor, valor_grama, estoque) VALUES (%s, %s, %s, %s)",
+        (nome, cor, valor_grama, estoque)
+    )
+    conn.commit()
+    novo_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Material cadastrado!", "id": novo_id})
+
+
+@app.route("/materiais/<int:material_id>", methods=["PUT"])
+def editar_material(material_id):
+    data = request.json
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Buscar material atual
+    cursor.execute("SELECT * FROM materiais WHERE id=%s", (material_id,))
+    material = cursor.fetchone()
+
+    if not material:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "Material não encontrado"}), 404
+
+    # Mantém valores antigos se não vierem no JSON
+    nome = data.get("nome", material["nome"])
+    cor = data.get("cor", material["cor"])
+    valor_grama = float(data.get("valor_grama", material["valor_grama"]))
+    novo_estoque = float(data.get("estoque", material["estoque"]))
+
+    estoque_antes = float(material["estoque"])
+
+    cursor.execute("""
+        UPDATE materiais
+        SET nome=%s, cor=%s, valor_grama=%s, estoque=%s
+        WHERE id=%s
+    """, (nome, cor, valor_grama, novo_estoque, material_id))
+
+    # Histórico de estoque
+    if novo_estoque != estoque_antes:
+        tipo = "ENTRADA" if novo_estoque > estoque_antes else "SAIDA"
+        quantidade = abs(novo_estoque - estoque_antes)
+
+        cursor.execute("""
+            INSERT INTO historico_estoque
+            (material_id, nome_material, tipo, quantidade, estoque_antes, estoque_depois, origem, data_movimentacao)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            material_id,
             nome,
-            cor,
-            valor_grama: mat.valor_grama,
-            estoque: mat.estoque
-        }),
-        success: function () {
-            carregarMateriais();
-            alert("Material atualizado!");
-        }
-    });
-});
-
-// ================================
-// REPOR MATERIAL (ÚLTIMO CUSTO)
-// ================================
-$(document).on("click", ".btnReporMaterial", function () {
-    let id = $(this).data("id");
-    let mat = materiais.find(m => m.id == id);
-
-    let qtdExtra = parseFloat(prompt("Quantidade extra (g):"));
-    let valorTotal = parseFloat(prompt("Valor total pago (R$):"));
-
-    if (!qtdExtra || qtdExtra <= 0 || !valorTotal || valorTotal <= 0) {
-        alert("Valores inválidos.");
-        return;
-    }
-
-    // 🔢 último custo substitui o antigo
-    let novoValorGrama = valorTotal / qtdExtra;
-
-    // 📦 soma estoque
-    let novoEstoque = mat.estoque + qtdExtra;
-
-    $.ajax({
-        url: `${API}/materiais/${id}`,
-        method: "PUT",
-        contentType: "application/json",
-        data: JSON.stringify({
-            valor_grama: novoValorGrama,
-            estoque: novoEstoque
-        }),
-        success: function () {
-            carregarMateriais();
-            alert(
-                `Reposição concluída!\n` +
-                `Novo valor por grama: R$ ${novoValorGrama.toFixed(4)}`
-            );
-        }
-    });
-});
-// ================================
-// EXCLUIR MATERIAL
-// ================================
-$(document).on("click", ".btnExcluirMaterial", function () {
-    let id = $(this).data("id");
-    if (!confirm("Tem certeza que deseja excluir este material?")) return;
-
-    $.ajax({
-        url: `${API}/materiais/${id}`,
-        method: "DELETE",
-        success: function () {
-            if ($("#tabelaMateriaisLista").is(":visible")) {
-                carregarMateriais();
-            }
-            alert("Material removido!");
-        }
-    });
-});
-
-// ================================
-// ADICIONAR MATERIAL (COM CÁLCULO AUTOMÁTICO)
-// ================================
-$("#addMaterial").click(function () {
-
-    let nome = $("#matNome").val();
-    let cor = $("#matCor").val();
-    let qtd = parseFloat($("#matQtd").val());
-    let valorTotal = parseFloat($("#matValorTotal").val());
-
-    if (!nome || !cor || !qtd || !valorTotal || qtd <= 0 || valorTotal <= 0) {
-        alert("Preencha todos os campos corretamente.");
-        return;
-    }
-
-    // 🔢 cálculo automático
-    let valorGrama = valorTotal / qtd;
-
-    let material = {
-        nome: nome,
-        cor: cor,
-        valor_grama: valorGrama,
-        estoque: qtd
-    };
-
-    $.ajax({
-        url: `${API}/materiais`,
-        method: "POST",
-        contentType: "application/json",
-        data: JSON.stringify(material),
-        success: function () {
-            if ($("#tabelaMateriaisLista").is(":visible")) {
-                carregarMateriais();
-            }
-
-            // limpa campos
-            $("#matNome, #matCor, #matQtd, #matValorTotal").val("");
-
-            alert(
-                `Material cadastrado com sucesso!\nValor por grama: R$ ${valorGrama.toFixed(4)}`
-            );
-        }
-    });
-});
-
-// ================================
-// PRODUTOS
-// ================================
-function carregarProdutos() {
-    $.get(`${API}/produtos`, function (data) {
-        produtos = data;
-        produtos = produtos.map(p => ({ ...p }));
-        atualizarTabelaProdutos();
-    });
-}
-
-$("#addLinhaMat").click(function () {
-    let linha = `
-        <tr>
-            <td>
-                <select class="matSelect">
-                    <option value="">Selecione</option>
-                </select>
-            </td>
-            <td><input type="number" class="matQtd" step="0.01"></td>
-            <td class="custoMat">R$ 0.00</td>
-            <td><button class="removeBtn">X</button></td>
-        </tr>`;
-
-    $("#tabelaMateriaisProd").append(linha);
-
-    // preencher select com materiais
-    let ultima = $("#tabelaMateriaisProd tr").last().find(".matSelect");
-    materiais.forEach(m => {
-        ultima.append(`<option value="${m.id}">${m.nome} (${m.cor})</option>`);
-    });
-});
-
-// remover linha
-$(document).on("click", ".removeBtn", function () {
-    $(this).closest("tr").remove();
-    calcularTotal();
-});
-
-// recalcular custo
-$(document).on("change", ".matSelect, .matQtd", function () {
-    calcularTotal();
-});
-
-function calcularTotal() {
-    let total = 0;
-
-    $("#tabelaMateriaisProd tr").each(function () {
-        let matId = parseInt($(this).find(".matSelect").val(), 10);
-        let qtd = parseFloat($(this).find(".matQtd").val());
-
-        if (!matId || !qtd) return;
-
-        let mat = materiais.find(m => m.id == matId);
-        let custo = mat.valor_grama * qtd;
-        total += custo;
-
-        $(this).find(".custoMat").text(`R$ ${custo.toFixed(2)}`);
-    });
-
-    $("#totalCusto").text(total.toFixed(2));
-}
-
-// ================================
-// ADICIONAR PRODUTO
-// ================================
-$("#addProduto").click(function () {
-    let produto = {
-        nome: $("#prodNome").val(),
-        tamanho: $("#prodTam").val(),
-        materiais: []
-    };
-
-    $("#tabelaMateriaisProd tr").each(function () {
-        let matId = parseInt($(this).find(".matSelect").val(), 10);
-        let qtd = parseFloat($(this).find(".matQtd").val());
-
-        if (matId && qtd) {
-            produto.materiais.push({ id: matId, quantidade: qtd });
-        }
-    });
-
-    $.ajax({
-        url: `${API}/produtos`,
-        method: "POST",
-        contentType: "application/json",
-        data: JSON.stringify(produto),
-        success: function () {
-            if ($("#tabelaProdutosLista").is(":visible")) {
-                carregarProdutos();
-            }
-            alert("Produto cadastrado!");
-        }
-    });
-});
-
-function atualizarTabelaProdutos() {
-    let tabela = $("#listaProdutos");
-    tabela.html("");
-
-    produtos.forEach(p => {
-        // Monta string detalhando os materiais
-        let materiaisDetalhe = p.materiais.map(m => {
-            let nome = m.nome; // nome do material
-            let qtd = parseFloat(m.quantidade).toFixed(2);
-            let valor = parseFloat(m.valor_grama).toFixed(2);
-            let custo = (valor * m.quantidade).toFixed(2);
-            return `${nome}: ${qtd}g (R$ ${custo})`;
-        }).join("<br>");
-
-        tabela.append(`
-            <tr>
-                <td>${p.id}</td>
-                <td>${p.nome}</td>
-                <td>${p.tamanho}</td>
-                <td>${materiaisDetalhe}</td>
-                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
-                <td>
-                    <button class="btnProduzir" data-id="${p.id}">Produzir</button>
-                    <button class="btnEditarProduto" data-id="${p.id}">Editar</button>
-                    <button class="btnExcluirProduto" data-id="${p.id}">Excluir</button>
-                </td>
-            </tr>
-        `);
-    });
-}
-
-
-// ================================
-// EDITAR PRODUTO
-// ================================
-$(document).on("click", ".btnEditarProduto", function () {
-    let id = $(this).data("id");
-    let prod = produtos.find(p => p.id == id);
-
-    let nome = prompt("Nome:", prod.nome);
-    let tamanho = prompt("Tamanho:", prod.tamanho);
-
-    // === EDITAR MATERIAIS ===
-    let novosMateriais = [];
-
-    prod.materiais.forEach((m) => {
-        let novaQtd = prompt(
-            `Material: ${m.nome}\nQuantidade atual (g): ${m.quantidade}\nNova quantidade (g):`,
-            m.quantidade
-        );
-
-        if (novaQtd !== null && !isNaN(parseFloat(novaQtd))) {
-            novosMateriais.push({
-                material_id: m.material_id || m.id,
-                quantidade: parseFloat(novaQtd)
-            });
-        }
-    });
-
-    $.ajax({
-        url: `${API}/produtos/${id}`,
-        method: "PUT",
-        contentType: "application/json",
-        data: JSON.stringify({
-            nome,
-            tamanho,
-            materiais: novosMateriais
-        }),
-        success: function () {
-            if ($("#tabelaProdutosLista").is(":visible")) {
-                carregarProdutos();
-            }
-            alert("Produto atualizado!");
-        },
-        error: function (xhr) {
-            alert("Erro ao atualizar: " + xhr.responseText);
-        }
-    });
-});
-
-
-// ================================
-// EXCLUIR PRODUTO
-// ================================
-$(document).on("click", ".btnExcluirProduto", function () {
-    let id = $(this).data("id");
-
-    if (!confirm("Excluir produto?")) return;
-
-    $.ajax({
-        url: `${API}/produtos/${id}`,
-        method: "DELETE",
-        success: function () {
-            alert("Produto removido!");
-
-            // limpa visualmente para evitar ID fantasma
-            $("#listaProdutos").html("");
-
-            // recarrega lista real do servidor
-            carregarProdutos();
-        },
-        error: function (xhr) {
-            alert("Erro ao remover: " + xhr.responseText);
-        }
-    });
-});
-
-// ================================
-// PRODUZIR PRODUTO
-// ================================
-$(document).on("click", ".btnProduzir", function () {
-    let id = $(this).data("id");
-    let qtd = parseInt(prompt("Quantas unidades deseja produzir?"), 10);
-
-    if (!qtd || qtd <= 0) {
-        alert("Quantidade inválida.");
-        return;
-    }
-
-    $.ajax({
-        url: `${API}/em_producao`,
-        method: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({
-            produto_id: id,
-            quantidade: qtd
-        }),
-        success: function () {
-            alert("Item enviado para a fila de produção!");
-
-            if ($("#tabelaEmProducaoLista").is(":visible")) carregarEmProducao();
-            if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
-        },
-        error: function (xhr) {
-            alert("Erro: " + xhr.responseText);
-        }
-    });
-}); 
-
-// =======================================================================
-// AÇÕES DE PRODUÇÃO
-// =======================================================================
-
-// Concluir produção (versão com captura de erro do backend)
-$(document).on("click", ".btnConcluirProducao", function () {
-    let id = $(this).data("id");
-
-    fetch(`${API}/em_producao/${id}/finalizar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-    })
-    .then(async res => {
-        if (!res.ok) {
-            let erro = await res.json();
-            alert(erro.error); // 🛑 Mostra exatamente: "Produção Interrompida: O material X está em falta!"
-            return;
-        }
-
-        alert("Produção concluída!");
-        carregarEmProducao();
-        if ($("#tabelaProducoesLista").is(":visible")) carregarProducoes();
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Erro inesperado ao finalizar produção.");
-    });
-});
-
-// Excluir produção da fila (devolve materiais)
-$(document).on("click", ".btnExcluirProducao", function () {
-    let id = $(this).data("id");
-
-    if (!confirm("Deseja remover este item da produção? Os materiais serão devolvidos ao estoque.")) return;
-
-    $.ajax({
-        url: `${API}/em_producao/${id}`,
-        method: "DELETE",
-        success: function () {
-            alert("Item removido da produção. Materiais devolvidos ao estoque.");
-            carregarEmProducao();
-            if ($("#tabelaMateriaisLista").is(":visible")) carregarMateriais();
-        }
-
-    });
-});
-
-// ================================
-// EM PRODUÇÃO
-// ================================
-function carregarEmProducao() {
-    $.get(`${API}/em_producao`, function (data) {
-        atualizarTabelaEmProducao(data);
-    });
-}
-
-function atualizarTabelaEmProducao(lista) {
-    let tabela = $("#listaEmProducao");
-    tabela.html("");
-
-    lista.forEach(p => {
-        tabela.append(`
-            <tr>
-                <td>${p.id}</td>
-                <td>${p.nome_produto}</td>
-                <td>${p.tamanho}</td>
-                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
-                <td>${p.quantidade}</td>
-                <td>
-                    <button class="btnConcluirProducao" data-id="${p.id}">Concluído</button>
-                    <button class="btnExcluirProducao" data-id="${p.id}">Excluir</button>
-                </td>
-            </tr>
-        `);
-    });
-}
-
-// ================================
-// PRODUÇÕES 
-// ================================
-
-// Mostrar / esconder período
-$("#filtroProducoes").change(function () {
-    if ($(this).val() === "periodo") {
-        $("#filtroPeriodoProducoes").slideDown();
-    } else {
-        $("#filtroPeriodoProducoes").slideUp();
-        $("#dataInicialProducoes").val("");
-        $("#dataFinalProducoes").val("");
-    }
-});
-
-// --------------------------------
-// Atualizar tabela (SEU CÓDIGO)
-// --------------------------------
-function atualizarTabelaProducoes(lista) {
-    let tabela = $("#listaProducoes");
-    tabela.html("");
-
-    lista.forEach(p => {
-        tabela.append(`
-            <tr>
-                <td>${p.id}</td>
-                <td>${p.nome_produto}</td>
-                <td>R$ ${parseFloat(p.custo_total).toFixed(2)}</td>
-                <td>${p.quantidade}</td>
-                <td>${new Date(p.data).toLocaleString()}</td>
-            </tr>
-        `);
-    });
-}
-
-// --------------------------------
-// Carregar produções (AJUSTADO)
-// --------------------------------
-function carregarProducoes(dataInicio = null, dataFim = null) {
-
-    let url = `${API}/producoes`;
-
-    if (dataInicio && dataFim) {
-        url += `?data_inicio=${dataInicio}&data_fim=${dataFim}`;
-    }
-
-    $.get(url, function (data) {
-        atualizarTabelaProducoes(data);
-        $("#tabelaProducoesLista").slideDown();
-    });
-}
-
-// --------------------------------
-// BOTÃO MOSTRAR PRODUÇÕES
-// --------------------------------
-$("#btnMostrarProducoes").click(function () {
-
-    const filtro = $("#filtroProducoes").val();
-    const dataInicial = $("#dataInicialProducoes").val();
-    const dataFinal = $("#dataFinalProducoes").val();
-
-    let hoje = new Date();
-    let inicio, fim;
-
-    switch (filtro) {
-
-        case "diario":
-            inicio = new Date();
-            inicio.setHours(0, 0, 0, 0);
-            fim = new Date();
-            fim.setHours(23, 59, 59, 999);
-            break;
-
-        case "semanal":
-            const diaSemana = hoje.getDay();
-            inicio = new Date(hoje);
-            inicio.setDate(hoje.getDate() - diaSemana);
-            inicio.setHours(0, 0, 0, 0);
-            fim = new Date();
-            break;
-
-        case "mensal":
-            inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
-            break;
-
-        case "anual":
-            inicio = new Date(hoje.getFullYear(), 0, 1);
-            fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
-            break;
-
-        case "periodo":
-            if (!dataInicial || !dataFinal) {
-                alert("Selecione a data inicial e final");
-                return;
-            }
-            inicio = new Date(`${dataInicial} 00:00:00`);
-            fim = new Date(`${dataFinal} 23:59:59`);
-            break;
-    }
-
-    carregarProducoes(
-        inicio.toISOString().slice(0, 10),
-        fim.toISOString().slice(0, 10)
-    );
-});
-
-
-
-// ============================================
-// RELATÓRIO GERAL (PRODUTOS + MATERIAIS)
-// ============================================
-
-$(document).ready(function () {
-
-    // ================================
-    // MOSTRAR / OCULTAR PERÍODO
-    // ================================
-    $("#filtroRelatorioGeral").on("change", function () {
-        if ($(this).val() === "periodo") {
-            $("#filtroPeriodoGeral").slideDown();
-        } else {
-            $("#filtroPeriodoGeral").slideUp();
-            $("#dataInicialGeral").val("");
-            $("#dataFinalGeral").val("");
-        }
-    });
-
-
-    // ================================
-    // CARREGAR MATERIAIS NO FILTRO
-    // ================================
-    $.get(`${API}/materiais`, function (materiais) {
-        const select = $("#filtroMaterialEstoque");
-        if (!select.length) return;
-
-        materiais.forEach(m => {
-            select.append(`
-                <option value="${m.id}">${m.nome}</option>
-            `);
-        });
-    });
-
-
-// ============================================
-// GERAR RELATÓRIO GERAL
-// ============================================
-$("#btnGerarRelatorioGeral").on("click", function () {
-
-    const filtro = $("#filtroRelatorioGeral").val();
-    const dataInicial = $("#dataInicialGeral").val();
-    const dataFinal = $("#dataFinalGeral").val();
-
-    const materialId = $("#filtroMaterialEstoque").length
-        ? $("#filtroMaterialEstoque").val()
-        : null;
-
-    // ============================================
-    // GERAR DATAS
-    // ============================================
-    let hoje = new Date();
-    let inicio, fim;
-
-    switch (filtro) {
-        case "diario":
-            inicio = new Date();
-            inicio.setHours(0, 0, 0, 0);
-            fim = new Date();
-            fim.setHours(23, 59, 59, 999);
-            break;
-
-        case "semanal":
-            const diaSemana = hoje.getDay();
-            inicio = new Date(hoje);
-            inicio.setDate(hoje.getDate() - diaSemana);
-            inicio.setHours(0, 0, 0, 0);
-            fim = new Date();
-            break;
-
-        case "mensal":
-            inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-            fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
-            break;
-
-        case "anual":
-            inicio = new Date(hoje.getFullYear(), 0, 1);
-            fim = new Date(hoje.getFullYear(), 11, 31, 23, 59, 59, 999);
-            break;
-
-        case "periodo":
-            if (!dataInicial || !dataFinal) {
-                alert("Selecione as datas!");
-                return;
-            }
-            inicio = new Date(`${dataInicial} 00:00:00`);
-            fim = new Date(`${dataFinal} 23:59:59`);
-            break;
-    }
-
-    // ============================================
-    // URLs DA API
-    // ============================================
-    let paramsEstoque = [
-        `data_inicio=${inicio.toISOString().slice(0, 10)}`,
-        `data_fim=${fim.toISOString().slice(0, 10)}`
-    ];
-
-    if (materialId) {
-        paramsEstoque.push(`material_id=${materialId}`);
-    }
-
-    const urlEstoque = `${API}/estoque?${paramsEstoque.join("&")}`;
-    const urlMateriais = `${API}/producoes_detalhes?data_inicio=${inicio.toISOString().slice(0, 10)}&data_fim=${fim.toISOString().slice(0, 10)}`;
-
-    // ============================================
-    // BUSCAR DADOS
-    // ============================================
-    Promise.all([
-        $.get(urlEstoque),
-        $.get(urlMateriais)
-    ])
-    .then(([listaProdutos, listaMateriais]) => {
-
-        // ✅ CORREÇÃO: limpar SOMENTE os TBODY
-        $("#tbodyResumoProdutos").html("");
-        $("#tbodyResumoMateriais").html("");
-        $("#tbodyTotalGeral").html("");
-
-        // ================================
-        // PRODUTOS
-        // ================================
-        let produtosAcumulados = {};
-        let totalGeralProdutos = 0;
-
-        listaProdutos.forEach(item => {
-
-            let nomeProd = item.nome_produto || "";
-            let qtdProd = Number(item.qtd_produto || 0);
-            let precoProd = Number(item.preco_produto || 0);
-
-            let qtdMat = Number(item.qtd_material || 0);
-            let precoMat = Number(item.preco_material || 0);
-
-            if (qtdProd > 0) {
-                if (!produtosAcumulados[nomeProd]) {
-                    produtosAcumulados[nomeProd] = {
-                        qtd: 0,
-                        preco: 0,
-                        totalMateriais: 0,
-                        custoMateriais: 0
-                    };
-                }
-
-                produtosAcumulados[nomeProd].qtd += qtdProd;
-                produtosAcumulados[nomeProd].preco += precoProd;
-            }
-
-            if (qtdMat > 0 && nomeProd) {
-                produtosAcumulados[nomeProd].totalMateriais += qtdMat;
-                produtosAcumulados[nomeProd].custoMateriais += precoMat;
-            }
-
-            totalGeralProdutos += precoProd + precoMat;
-        });
-
-        Object.keys(produtosAcumulados).forEach(nome => {
-            let p = produtosAcumulados[nome];
-
-            // ✅ CORREÇÃO: inserir no TBODY
-            $("#tbodyResumoProdutos").append(`
-                <tr>
-                    <td>${nome}</td>
-                    <td>${p.qtd}</td>
-                    <td>R$ ${p.preco.toFixed(2)}</td>
-                    <td>${p.totalMateriais} g</td>
-                    <td>R$ ${p.custoMateriais.toFixed(2)}</td>
-                    <td>R$ ${(p.preco + p.custoMateriais).toFixed(2)}</td>
-                </tr>
-            `);
-        });
-
-        // ================================
-        // MATERIAIS
-        // ================================
-        let materiaisResumo = {};
-        let totalGeralMateriais = 0;
-
-        listaMateriais.forEach(d => {
-            let nome = d.material_nome;
-            let qtd = Number(d.quantidade_usada || 0);
-            let valor = Number(d.valor_total || 0);
-
-            if (!materiaisResumo[nome]) {
-                materiaisResumo[nome] = { qtd: 0, preco: 0 };
-            }
-
-            materiaisResumo[nome].qtd += qtd;
-            materiaisResumo[nome].preco += valor;
-
-            totalGeralMateriais += valor;
-        });
-
-        Object.keys(materiaisResumo).forEach(nome => {
-            let m = materiaisResumo[nome];
-
-            // ✅ CORREÇÃO: inserir no TBODY
-            $("#tbodyResumoMateriais").append(`
-                <tr>
-                    <td>${nome}</td>
-                    <td>${m.qtd} g</td>
-                    <td>R$ ${m.preco.toFixed(2)}</td>
-                </tr>
-            `);
-        });
-
-        // ================================
-        // TOTAL GERAL
-        // ================================
-        $("#tbodyTotalGeral").html(`
-            <tr>
-                <td>Geral</td>
-                <td>-</td>
-                <td>R$ ${(totalGeralProdutos + totalGeralMateriais).toFixed(2)}</td>
-            </tr>
-        `);
-
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Erro ao gerar relatório geral.");
-    });
-
-});
-
-// ============================================
-// GERAR PDF DO RELATÓRIO GERAL
-// ============================================
-$("#btnBaixarPDF").on("click", function () {
-
-    if ($("#tabelaResumoProdutosMateriais tbody tr").length === 0) {
-        alert("Gere o relatório antes de baixar o PDF.");
-        return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF("p", "mm", "a4");
-
-    let dataAgora = new Date().toLocaleString("pt-BR");
-
-    doc.setFontSize(14);
-    doc.text("Relatório Geral de Produção", 14, 15);
-
-    doc.setFontSize(9);
-    doc.text(`Gerado em: ${dataAgora}`, 14, 22);
-
-    doc.autoTable({
-        html: "#tabelaResumoProdutosMateriais",
-        startY: 28,
-        theme: "grid",
-        styles: { fontSize: 8 }
-    });
-
-    let y = doc.lastAutoTable.finalY + 10;
-
-    doc.autoTable({
-        html: "#tabelaResumoMateriais",
-        startY: y,
-        theme: "grid",
-        styles: { fontSize: 8 }
-    });
-
-    y = doc.lastAutoTable.finalY + 10;
-
-    doc.autoTable({
-        html: "#tabelaTotalGeral",
-        startY: y,
-        theme: "grid",
-        styles: { fontSize: 9 }
-    });
-
-    doc.save("relatorio-geral.pdf");
-});
-
-});
-
+            tipo,
+            quantidade,
+            estoque_antes,
+            novo_estoque,
+            "REPOSIÇÃO"
+        ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Material atualizado com sucesso!"})
+
+
+@app.route("/materiais/<int:material_id>", methods=["DELETE"])
+def excluir_material(material_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM materiais WHERE id=%s", (material_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"message": "Material removido!"})
+
+# =====================================
+# PRODUTOS
+# =====================================
+@app.route("/produtos", methods=["GET"])
+def listar_produtos():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM produtos")
+    produtos = cursor.fetchall()
+
+    for prod in produtos:
+        cursor.execute("""
+            SELECT m.id, m.nome, m.cor, m.valor_grama, pm.quantidade
+            FROM produto_materiais pm
+            JOIN materiais m ON pm.material_id = m.id
+            WHERE pm.produto_id = %s
+        """, (prod["id"],))
+        
+        prod["materiais"] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return jsonify(produtos)
+
+
+@app.route("/produtos", methods=["POST"])
+def adicionar_produto():
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    custo_total = 0
+    for item in data["materiais"]:
+        cursor.execute("SELECT valor_grama FROM materiais WHERE id=%s", (int(item["id"]),))
+        valor = cursor.fetchone()[0]
+        custo_total += float(item["quantidade"]) * float(valor)
+    cursor.execute(
+        "INSERT INTO produtos (nome, tamanho, custo_total) VALUES (%s, %s, %s)",
+        (data["nome"], data["tamanho"], custo_total)
+    )
+    produto_id = cursor.lastrowid
+    for item in data["materiais"]:
+        cursor.execute(
+            "INSERT INTO produto_materiais (produto_id, material_id, quantidade) VALUES (%s, %s, %s)",
+            (produto_id, int(item["id"]), float(item["quantidade"]))
+        )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({"message": "Produto cadastrado!", "id": produto_id})
+
+@app.route("/produtos/<int:produto_id>", methods=["PUT"])
+def editar_produto(produto_id):
+    data = request.json
+
+    nome = data.get("nome")
+    tamanho = data.get("tamanho")
+    materiais = data.get("materiais", [])
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Atualiza nome e tamanho
+    cursor.execute("""
+        UPDATE produtos
+        SET nome=%s, tamanho=%s
+        WHERE id=%s
+    """, (nome, tamanho, produto_id))
+
+    # Remove materiais antigos
+    cursor.execute("DELETE FROM produto_materiais WHERE produto_id=%s", (produto_id,))
+
+    # Recalcular custo_total
+    custo_total = 0
+
+    for item in materiais:
+        material_id = int(item["material_id"])
+        quantidade = float(item["quantidade"])
+
+        # Buscar valor da grama
+        cursor.execute("SELECT valor_grama FROM materiais WHERE id=%s", (material_id,))
+        valor = cursor.fetchone()["valor_grama"]
+
+        # Somar ao custo total
+        custo_total += quantidade * float(valor)
+
+        # Inserir material atualizado
+        cursor.execute("""
+            INSERT INTO produto_materiais (produto_id, material_id, quantidade)
+            VALUES (%s, %s, %s)
+        """, (produto_id, material_id, quantidade))
+
+    # Atualiza custo total no produto
+    cursor.execute("""
+        UPDATE produtos
+        SET custo_total=%s
+        WHERE id=%s
+    """, (custo_total, produto_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Produto atualizado!"})
+
+
+@app.route("/produtos/<int:produto_id>", methods=["DELETE"])
+def excluir_produto(produto_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Primeiro remove materiais vinculados ao produto
+    cursor.execute("DELETE FROM produto_materiais WHERE produto_id=%s", (produto_id,))
+
+    # Agora sim pode remover o produto
+    cursor.execute("DELETE FROM produtos WHERE id=%s", (produto_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    return jsonify({"message": "Produto removido!"})
+
+# =====================================
+# PRODUÇÃO
+# =====================================
+@app.route("/produzir/<int:id_produto>", methods=["POST"])
+def produzir_produto(id_produto):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Buscar produto
+    cursor.execute("SELECT * FROM produtos WHERE id = %s", (id_produto,))
+    produto = cursor.fetchone()
+    if not produto:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "Produto não encontrado"}), 404
+
+    # Buscar materiais do produto
+    cursor.execute("""
+        SELECT 
+            m.id AS id_material,
+            m.nome,
+            pm.quantidade AS qtd,
+            m.valor_grama AS valor_unitario
+        FROM produto_materiais pm
+        JOIN materiais m ON pm.material_id = m.id
+        WHERE pm.produto_id = %s
+    """, (id_produto,))
+    materiais = cursor.fetchall()
+
+    # Calcular custo total
+    custo_total = sum(m["qtd"] * m["valor_unitario"] for m in materiais)
+
+    # 1) Criar registro na tabela producoes
+    cursor.execute("""
+        INSERT INTO producoes 
+        (produto_id, nome_produto, quantidade, custo_total, data)
+        VALUES (%s, %s, %s, %s, NOW())
+    """, (id_produto, produto["nome"], 1, custo_total))
+
+    producao_id = cursor.lastrowid
+
+    # 2) Salvar snapshot dos materiais usados
+    for m in materiais:
+        cursor.execute("""
+            INSERT INTO producoes_detalhes
+            (producao_id, material_id, material_nome, quantidade_usada, valor_unitario, valor_total)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            producao_id,
+            m["id_material"],  # salva o ID corretamente
+            m["nome"],
+            m["qtd"],
+            m["valor_unitario"],
+            m["qtd"] * m["valor_unitario"]
+        ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"status": "Produção registrada com sucesso"})
+
+
+# =====================================
+# EM PRODUÇÃO (FILA)
+# =====================================
+
+@app.route("/em_producao", methods=["GET"])
+def listar_em_producao():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT e.id, p.nome AS nome_produto, p.tamanho, e.quantidade, e.custo_total
+        FROM em_producao e
+        JOIN produtos p ON e.produto_id = p.id
+    """)
+    dados = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(dados)
+
+
+@app.route("/em_producao", methods=["POST"])
+def adicionar_em_producao():
+    data = request.json
+    produto_id = data["produto_id"]
+
+    from decimal import Decimal
+    quantidade = Decimal(str(data["quantidade"]))  # <-- Correto
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Busca custo do produto
+    cursor.execute("SELECT custo_total FROM produtos WHERE id=%s", (produto_id,))
+    prod = cursor.fetchone()
+    from decimal import Decimal
+    custo_unit = Decimal(str(prod["custo_total"]))
+
+
+    # Agora sim podemos calcular o custo final
+    custo_total = custo_unit * quantidade
+
+    # Insere na fila
+    cursor.execute("""
+        INSERT INTO em_producao (produto_id, quantidade, custo_total, data_inicio)
+        VALUES (%s, %s, %s, NOW())
+    """, (produto_id, quantidade, custo_total))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Adicionado à fila de produção!"})
+
+
+@app.route("/em_producao/<int:item_id>", methods=["DELETE"])
+def remover_em_producao(item_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Recupera dados
+    cursor.execute("SELECT * FROM em_producao WHERE id=%s", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        return jsonify({"error": "Item não encontrado"}), 404
+
+    # Devolve materiais ao estoque
+    cursor.execute("SELECT * FROM produto_materiais WHERE produto_id=%s", (item["produto_id"],))
+    materiais = cursor.fetchall()
+
+    from decimal import Decimal
+
+    for mat in materiais:
+        qtd_mat = Decimal(str(mat["quantidade"]))
+        qtd_item = Decimal(str(item["quantidade"]))
+        qtd_devolver = qtd_mat * qtd_item
+
+        cursor.execute("""
+            UPDATE materiais SET estoque = estoque + %s
+            WHERE id = %s
+        """, (qtd_devolver, mat["material_id"]))
+
+    # Apaga da fila DEPOIS do loop
+    cursor.execute("DELETE FROM em_producao WHERE id=%s", (item_id,))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Removido da fila e materiais devolvidos!"})
+
+
+@app.route("/em_producao/<int:item_id>/finalizar", methods=["POST"])
+def finalizar_producao(item_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Recupera item da fila
+    cursor.execute("SELECT * FROM em_producao WHERE id=%s", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        return jsonify({"error": "Item não encontrado"}), 404
+
+    # Buscar nome do produto
+    cursor.execute("SELECT nome FROM produtos WHERE id=%s", (item["produto_id"],))
+    prod = cursor.fetchone()
+
+    # Buscar materiais necessários
+    cursor.execute("""
+        SELECT pm.material_id, pm.quantidade AS qtd_por_unidade,
+               m.nome AS nome_material, m.estoque, m.valor_grama AS valor_unitario
+        FROM produto_materiais pm
+        JOIN materiais m ON m.id = pm.material_id
+        WHERE pm.produto_id = %s
+    """, (item["produto_id"],))
+    materiais = cursor.fetchall()
+
+    from decimal import Decimal
+    qtd_item = Decimal(str(item["quantidade"]))
+
+    # 🔒 VERIFICAÇÃO DE ESTOQUE (antes de descontar)
+    for mat in materiais:
+        qtd_necessaria = Decimal(str(mat["qtd_por_unidade"])) * qtd_item
+        if mat["estoque"] < qtd_necessaria:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                "error": f"Produção Interrompida: O material '{mat['nome_material']}' está em falta!"
+            }), 400
+
+    # 🔥 DESCONTAR ESTOQUE (só se tudo estiver OK)
+    for mat in materiais:
+        qtd_necessaria = Decimal(str(mat["qtd_por_unidade"])) * qtd_item
+        cursor.execute("""
+            UPDATE materiais
+            SET estoque = estoque - %s
+            WHERE id = %s
+        """, (qtd_necessaria, mat["material_id"]))
+
+    # Registrar na tabela producoes
+    cursor.execute("""
+        INSERT INTO producoes (produto_id, nome_produto, quantidade, custo_total, data)
+        VALUES (%s, %s, %s, %s, NOW())
+    """, (
+        item["produto_id"],
+        prod["nome"],
+        item["quantidade"],
+        item["custo_total"]
+    ))
+    producao_id = cursor.lastrowid  # pegar id da produção recém-criada
+
+    # Registrar detalhes na tabela producoes_detalhes
+    for mat in materiais:
+        qtd_necessaria = Decimal(str(mat["qtd_por_unidade"])) * qtd_item
+        valor_unitario = Decimal(str(mat["valor_unitario"] or 0))
+        cursor.execute("""
+            INSERT INTO producoes_detalhes
+            (producao_id, material_id, material_nome, quantidade_usada, valor_unitario, valor_total)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            producao_id,
+            mat["material_id"],
+            mat["nome_material"],
+            qtd_necessaria,
+            valor_unitario,
+            qtd_necessaria * valor_unitario
+        ))
+
+    # Remover da fila
+    cursor.execute("DELETE FROM em_producao WHERE id=%s", (item_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Produção concluída e detalhes registrados!"})
+
+@app.route("/producoes", methods=["GET"])
+def listar_producoes():
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT
+            p.id,
+            p.nome_produto,
+            p.quantidade,
+            p.custo_total,
+            p.data
+        FROM producoes p
+        WHERE 1=1
+    """
+
+    params = []
+
+    if data_inicio:
+        query += " AND p.data >= %s"
+        params.append(data_inicio + " 00:00:00")
+
+    if data_fim:
+        query += " AND p.data <= %s"
+        params.append(data_fim + " 23:59:59")
+
+    query += " ORDER BY p.data DESC, p.id DESC"
+
+    cursor.execute(query, params)
+    dados = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(dados)
+
+@app.route("/producoes_detalhes", methods=["GET"])
+def listar_producoes_detalhes():
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT 
+            pd.id,
+            pd.material_id,
+            pd.material_nome,
+            pd.quantidade_usada,
+            pd.valor_unitario,
+            pd.valor_total,
+            p.data AS data_producao
+        FROM producoes_detalhes pd
+        JOIN producoes p ON p.id = pd.producao_id
+        WHERE 1=1
+    """
+
+    params = []
+
+    if data_inicio:
+        query += " AND p.data >= %s"
+        params.append(data_inicio + " 00:00:00")
+
+    if data_fim:
+        query += " AND p.data <= %s"
+        params.append(data_fim + " 23:59:59")
+
+    query += " ORDER BY p.data DESC"
+
+    cursor.execute(query, params)
+    dados = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(dados)
+
+@app.route("/estoque", methods=["GET"])
+def relatorio_geral():
+    material_id = request.args.get("material_id")
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT
+            p.id AS id_producao,
+            p.nome_produto AS nome_produto,
+            p.quantidade AS qtd_produto,
+            p.custo_total AS preco_produto,
+            p.data AS data_producao,
+
+            pd.material_id,
+            pd.material_nome AS nome_material,
+            pd.quantidade_usada AS qtd_material,
+            pd.valor_total AS preco_material
+
+        FROM producoes p
+        LEFT JOIN producoes_detalhes pd
+            ON pd.producao_id = p.id
+        WHERE 1=1
+    """
+
+    params = []
+
+    # filtro por material_id (opcional)
+    if material_id:
+        query += " AND pd.material_id = %s"
+        params.append(material_id)
+
+    # filtro por data de produção
+    if data_inicio:
+        query += " AND p.data >= %s"
+        params.append(data_inicio + " 00:00:00")
+    if data_fim:
+        query += " AND p.data <= %s"
+        params.append(data_fim + " 23:59:59")
+
+    query += " ORDER BY p.data DESC, p.id DESC"
+
+    cursor.execute(query, params)
+    dados = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    # Garantir campos numéricos corretos
+    for row in dados:
+        if row.get("qtd_produto") is None:
+            row["qtd_produto"] = 0
+        if row.get("preco_produto") is None:
+            row["preco_produto"] = 0.0
+        if row.get("qtd_material") is None:
+            row["qtd_material"] = 0
+        if row.get("preco_material") is None:
+            row["preco_material"] = 0.0
+
+    return jsonify(dados)
+
+# =====================================
+# RODAR API
+# =====================================
+if __name__ == "__main__":
+    app.run(debug=True)
