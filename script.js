@@ -102,12 +102,12 @@ $(document).on("click", ".btnEditarMaterial", function () {
         contentType: "application/json",
         data: JSON.stringify({
             nome,
-            cor
+            cor,
+            valor_grama: mat.valor_grama,
+            estoque: mat.estoque
         }),
         success: function () {
-            if ($("#tabelaMateriaisLista").is(":visible")) {
-                carregarMateriais();
-            }
+            carregarMateriais();
             alert("Material atualizado!");
         }
     });
@@ -171,14 +171,28 @@ $(document).on("click", ".btnExcluirMaterial", function () {
 });
 
 // ================================
-// ADICIONAR MATERIAL
+// ADICIONAR MATERIAL (COM CÁLCULO AUTOMÁTICO)
 // ================================
 $("#addMaterial").click(function () {
+
+    let nome = $("#matNome").val();
+    let cor = $("#matCor").val();
+    let qtd = parseFloat($("#matQtd").val());
+    let valorTotal = parseFloat($("#matValorTotal").val());
+
+    if (!nome || !cor || !qtd || !valorTotal || qtd <= 0 || valorTotal <= 0) {
+        alert("Preencha todos os campos corretamente.");
+        return;
+    }
+
+    // 🔢 cálculo automático
+    let valorGrama = valorTotal / qtd;
+
     let material = {
-        nome: $("#matNome").val(),
-        cor: $("#matCor").val(),
-        valor_grama: parseFloat($("#matValor").val()),
-        estoque: parseFloat($("#matQtd").val())
+        nome: nome,
+        cor: cor,
+        valor_grama: valorGrama,
+        estoque: qtd
     };
 
     $.ajax({
@@ -190,7 +204,13 @@ $("#addMaterial").click(function () {
             if ($("#tabelaMateriaisLista").is(":visible")) {
                 carregarMateriais();
             }
-            alert("Material cadastrado!");
+
+            // limpa campos
+            $("#matNome, #matCor, #matQtd, #matValorTotal").val("");
+
+            alert(
+                `Material cadastrado com sucesso!\nValor por grama: R$ ${valorGrama.toFixed(4)}`
+            );
         }
     });
 });
@@ -891,8 +911,3 @@ $("#btnBaixarPDF").on("click", function () {
 });
 
 });
-
-
-
-
-
