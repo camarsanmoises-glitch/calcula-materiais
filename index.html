@@ -27,10 +27,10 @@
     <label>Cor:</label>
     <input type="text" id="matCor">
 
-    <label>Valor por grama (R$):</label>
-    <input type="number" id="matValor" step="0.01">
+    <label>Valor total pago (R$):</label>
+    <input type="number" id="matValorTotal" step="0.01">
 
-    <label>Quantidade em estoque (g):</label>
+    <label>Quantidade comprada (g):</label>
     <input type="number" id="matQtd" step="0.01">
 
     <button id="addMaterial">Cadastrar Material</button>
@@ -41,7 +41,12 @@
         <table id="tabelaMateriais">
             <thead>
                 <tr>
-                    <th>ID</th><th>Nome</th><th>Cor</th><th>Valor/g</th><th>Estoque (g)</th><th>Ações</th>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Cor</th>
+                    <th>Valor/g</th>
+                    <th>Estoque (g)</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody id="listaMateriais"></tbody>
@@ -216,4 +221,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
