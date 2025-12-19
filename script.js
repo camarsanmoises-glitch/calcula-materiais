@@ -129,21 +129,20 @@ $(document).on("click", ".btnReporMaterial", function () {
     }
 
     let novoValorGrama = valorTotal / qtdExtra;
-    let novoEstoque = parseFloat(mat.estoque) + qtdExtra;
 
+    // 🔹 envia quantidade a adicionar (entrada_estoque) para a API
     $.ajax({
         url: `${API}/materiais/${id}`,
         method: "PUT",
         contentType: "application/json",
         data: JSON.stringify({
-            valor_grama: novoValorGrama,
-            estoque: novoEstoque
+            entrada_estoque: qtdExtra,  // <=== aqui
+            valor_grama: novoValorGrama
         }),
         success: function () {
             carregarMateriais();
             alert(
                 `Reposição concluída!\n` +
-                `Novo estoque: ${novoEstoque} g\n` +
                 `Novo valor por grama: R$ ${novoValorGrama.toFixed(4)}`
             );
         }
@@ -910,4 +909,5 @@ $("#btnBaixarPDF").on("click", function () {
 });
 
 });
+
 
